@@ -16,10 +16,18 @@ builder.Services.AddSwaggerGen(c =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Cho phép Swagger chạy trên cả Windows, Linux và Docker
+var enableSwagger = app.Environment.IsDevelopment() || 
+                    app.Configuration.GetValue<bool>("EnableSwagger", true);
+
+if (enableSwagger)
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Manage365 API v1");
+        c.RoutePrefix = "swagger";
+    });
 }
 else
 {
