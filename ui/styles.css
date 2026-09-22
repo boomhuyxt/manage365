@@ -1,0 +1,383 @@
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
+:root {
+  --bg-dark-panel: #2c1a0e;
+  --bg-card-feature: rgba(255, 255, 255, 0.08);
+  /* Bảng màu chuẩn theo ảnh mẫu */
+  --bg-right-panel: #fffdf8; /* Nền kem nhạt của cột phải */
+  --bg-input: #fff8f0; /* Nền input vàng kem */
+  --bg-banner: #fff3eb; /* Nền banner Passkey */
+  --bg-banner-icon: #ffe3d1; /* Nền icon banner */
+  --color-orange: #f39c12; /* Màu nút chính Vàng Cam */
+  --color-orange-hover: #d68910; /* Màu nút khi hover */
+  --color-amber: #ffae19;
+}
+
+body {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  background-color: #efe8e2;
+}
+
+.main-card {
+  max-width: 1040px;
+  border-radius: 24px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* CỘT TRÁI */
+.left-panel {
+  background-color: var(--bg-dark-panel);
+}
+
+.brand-icon,
+.feature-icon {
+  width: 40px;
+  height: 40px;
+  background-color: var(--color-orange);
+}
+
+.bg-amber {
+  background-color: var(--color-amber);
+}
+
+.feature-card {
+  background-color: var(--bg-card-feature);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.terminal-badge {
+  background-color: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #10b981;
+  border-radius: 50%;
+  display: inline-block;
+  box-shadow: 0 0 8px #10b981;
+}
+
+/* CỘT PHẢI - FORM PANEL (ĐÃ ĐỔI MÀU) */
+.right-panel {
+  background-color: var(--bg-right-panel) !important;
+}
+
+/* Tuỳ chỉnh các ô nhập liệu (Input) màu vàng kem */
+.right-panel .form-control,
+.right-panel .input-group-text,
+.right-panel .btn-group {
+  background-color: var(--bg-input) !important;
+  border-color: #f1e4d8 !important;
+}
+
+.form-control::placeholder {
+  color: #b5a595 !important;
+  font-weight: 400;
+  opacity: 0.9;
+}
+/* Nút Đăng Nhập Vàng Cam */
+.btn-orange {
+  background-color: var(--color-orange) !important;
+  border: none;
+  transition: all 0.2s ease;
+}
+
+.btn-orange:hover {
+  background-color: var(--color-orange-hover) !important;
+  transform: translateY(-1px);
+}
+
+/* Nút Đăng Nhập SSO (Google / Microsoft) */
+.btn-sso {
+  background-color: var(--bg-input) !important;
+  border-color: #f1e4d8 !important;
+}
+
+.btn-sso:hover {
+  background-color: #f5eae0 !important;
+}
+
+/* Checkbox */
+.form-check-input:checked {
+  background-color: var(--color-orange);
+  border-color: var(--color-orange);
+}
+
+/* Extra Typography */
+.extra-small {
+  font-size: 0.75rem;
+}
+
+.tracking-wider {
+  letter-spacing: 0.05em;
+}
+
+/* Khung nền tổng của 2 Tab */
+.custom-tab-container {
+  background-color: #fff3eb; /* Nền cam nhạt tổng thể */
+  border: 1px solid #ffe3d1; /* Viền mờ bao quanh container */
+}
+
+/* Nút Tab */
+.custom-tab-btn {
+  font-size: 0.875rem;
+  border-radius: 12px !important;
+  transition: all 0.2s ease-in-out;
+  background-color: transparent;
+  color: #555555;
+}
+
+/* Khung chứa các tab */
+.custom-tab-container {
+  background-color: #fff3eb;
+  border: 1px solid #ffe3d1;
+  position: relative;
+  display: inline-flex;
+}
+
+/* Các nút Tab */
+.custom-tab-btn {
+  font-size: 0.875rem;
+  border-radius: 12px !important;
+  background-color: transparent !important; /* Để lộ thanh trượt phía dưới */
+  color: #705d4f;
+  transition: color 0.25s ease-in-out;
+  cursor: pointer;
+  white-space: nowrap;
+  z-index: 2 !important;
+}
+
+.custom-tab-btn.active {
+  color: #1a1a1a !important;
+}
+
+/* Thanh trượt nền màu trắng */
+.tab-indicator {
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: 4px;
+  background-color: #ffffff;
+  border: 1px solid #ffe3d1;
+  border-radius: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  /* Hiệu ứng trượt lò xò nhẹ cực mượt */
+  transition:
+    transform 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    width 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 0;
+}
+
+/* Animation mượt cho form */
+.form-tab-content {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+.form-tab-content.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Animation cho nội dung Tab */
+.form-tab-content {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+
+/* Khi Tab hiển thị active */
+.form-tab-content.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+/* =====================================
+            DASHBOARD
+======================================== */
+/* Styling riêng cho Dashboard QR */
+:root {
+  --color-orange: #ff7a00;
+  --bg-cream: #fffdf9;
+  --bg-cream-card: #fff8f3;
+}
+
+body.bg-light-cream {
+  background-color: var(--bg-cream);
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+
+.bg-light-cream {
+  background-color: var(--bg-cream-card);
+}
+
+.bg-warning-orange,
+.btn-warning-orange {
+  background-color: var(--color-orange) !important;
+  color: #ffffff !important;
+  border: none;
+}
+
+.btn-warning-orange:hover {
+  background-color: #e66e00 !important;
+}
+
+.text-warning-orange {
+  color: var(--color-orange) !important;
+}
+
+.text-amber {
+  color: #ffb020;
+}
+
+.extra-small {
+  font-size: 0.78rem;
+}
+
+.uppercase {
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.min-vh-40 {
+  min-height: 320px;
+}
+
+.qr-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+/* ====================================
+               SCHEDULE
+======================================= */
+:root {
+  --shift-morning-bg: #fff7ed;
+  --shift-morning-border: #fed7aa;
+  --shift-morning-text: #c2410c;
+  --shift-afternoon-bg: #eff6ff;
+  --shift-afternoon-border: #bfdbfe;
+  --shift-afternoon-text: #1d4ed8;
+  --shift-night-bg: #f5f3ff;
+  --shift-night-border: #ddd6fe;
+  --shift-night-text: #6d28d9;
+  --shift-off-bg: #f8fafc;
+  --shift-off-border: #e2e8f0;
+  --shift-off-text: #64748b;
+}
+
+.table-schedule {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table-schedule thead th {
+  background-color: #faf6f0;
+  border-bottom: 2px solid #ecdccb;
+  color: #493b31;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 12px 10px;
+}
+
+.table-schedule tbody td {
+  background-color: #ffffff;
+  border-bottom: 1px solid #f2e9df;
+  border-right: 1px solid #f6f0ea;
+  padding: 10px 8px;
+  vertical-align: middle;
+}
+
+.table-schedule tbody tr:hover td {
+  background-color: #fffaf4;
+}
+
+.col-today {
+  background-color: #fffbf0 !important;
+  border-left: 2px solid var(--color-orange) !important;
+  border-right: 2px solid var(--color-orange) !important;
+}
+
+.shift-badge-cell {
+  border-radius: 10px;
+  padding: 6px 8px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.shift-badge-cell:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.08);
+}
+
+.shift-morning {
+  background-color: var(--shift-morning-bg);
+  border-color: var(--shift-morning-border);
+  color: var(--shift-morning-text);
+}
+
+.shift-afternoon {
+  background-color: var(--shift-afternoon-bg);
+  border-color: var(--shift-afternoon-border);
+  color: var(--shift-afternoon-text);
+}
+
+.shift-night {
+  background-color: var(--shift-night-bg);
+  border-color: var(--shift-night-border);
+  color: var(--shift-night-text);
+}
+
+.shift-off {
+  background-color: var(--shift-off-bg);
+  border-color: var(--shift-off-border);
+  color: var(--shift-off-text);
+  opacity: 0.85;
+}
+
+.stat-card-widget {
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.stat-card-widget:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+}
+
+.filter-btn-pill.active {
+  background-color: var(--color-orange) !important;
+  color: #ffffff !important;
+  border-color: var(--color-orange) !important;
+}
+
+.toast-notification {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1090;
+  min-width: 320px;
+}
