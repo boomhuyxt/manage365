@@ -1,13 +1,9 @@
-@{
-    Layout = null;
-    ViewData["Title"] = "Retail365 - Màn Hình Điểm Danh QR";
-}
 <!doctype html>
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"]</title>
+    <title>Retail365 - Màn Hình Điểm Danh QR</title>
     <!-- Bootstrap 5 CSS -->
     <link
       rel="stylesheet"
@@ -20,23 +16,23 @@
     />
     <!-- QR Code Generator Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <link rel="stylesheet" href="~/css/retail365.css" asp-append-version="true" />
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body class="bg-light-cream min-vh-100 pb-4">
     <!-- TOP NAVIGATION BAR -->
-    <nav class="navbar navbar-expand-lg bg-white border-bottom px-4 py-2 mb-3 sticky-top shadow-sm">
+    <nav class="navbar navbar-expand-lg bg-white border-bottom px-4 py-2 mb-3">
       <div class="container-fluid">
         <a
           class="navbar-brand d-flex align-items-center gap-2 fw-bold"
-          href="/"
+          href="#"
         >
           <div
             class="brand-icon bg-orange text-white rounded-3 d-flex align-items-center justify-content-center"
-            style="width: 34px; height: 34px"
+            style="width: 32px; height: 32px"
           >
             <i class="fa-solid fa-store fs-6"></i>
           </div>
-          <span class="fs-6 text-dark"
+          <span class="fs-6"
             >Retail365
             <span
               class="badge bg-warning-subtle text-warning-orange border extra-small ms-1"
@@ -50,26 +46,24 @@
             class="navbar-nav d-none d-md-flex flex-row gap-3 extra-small fw-semibold"
           >
             <li class="nav-item">
-              <a class="nav-link text-warning-orange active fw-bold" href="/"
-                ><i class="fa-solid fa-qrcode me-1"></i> Màn Hình Điểm Danh QR</a
+              <a class="nav-link text-warning-orange active fw-bold" href="#"
+                >Màn Hình Điểm Danh QR</a
               >
             </li>
-            <li class="nav-item">
-              <a class="nav-link text-secondary" href="/Schedule"
-                ><i class="fa-solid fa-calendar-days me-1"></i> Bảng Phân Ca & Nhân Sự</a
+            <li class="nav-item admin-only d-none">
+              <a class="nav-link text-secondary" href="#"
+                >Bảng Phân Ca & Nhân Sự</a
               >
             </li>
-            <li class="nav-item">
-              <a class="nav-link text-muted" href="/Account/Login"
-                ><i class="fa-solid fa-arrow-right-from-bracket me-1"></i> Đăng Xuất / Đổi TK</a
-              >
+            <li class="nav-item admin-only d-none">
+              <a class="nav-link text-secondary" href="#">Báo Cáo Giờ Công</a>
             </li>
           </ul>
           <div class="d-flex align-items-center gap-2 border-start ps-3">
-            <span
+            <small
               id="userRoleBadge"
-              class="badge bg-secondary-subtle text-secondary extra-small px-2 py-1 rounded-pill"
-            >Đang tải vai trò...</span>
+              class="badge bg-secondary-subtle text-secondary extra-small"
+            ></small>
           </div>
         </div>
       </div>
@@ -263,19 +257,19 @@
           </div>
         </div>
 
-        <!-- CỘT PHẢI: XỬ LÝ ĐỘNG THEO ROLE -->
+        <!-- CỘT PHẢI: XỬ LÝ ĐỘNG THEO ROLE TỪ DATABASE -->
         <div class="col-lg-6">
           <div
             class="bg-white rounded-4 border p-4 shadow-sm h-100 d-flex flex-column justify-content-between"
           >
-            <!-- GIAO DIỆN ADMIN -->
+            <!-- GIAO DIỆN ADMIN (Mặc định ẩn) -->
             <div id="adminView" class="role-view d-none">
               <div
                 class="d-flex justify-content-between align-items-center mb-3"
               >
                 <div>
                   <small class="text-muted extra-small uppercase fw-bold"
-                    >CHỈ SỐ CHUYÊN CẦN</small
+                    >CHỈ SỐ CHUYỂN CẦN</small
                   >
                   <h6 class="fw-bold text-dark mb-0">
                     Điểm Danh Ca Chiều #104
@@ -339,36 +333,10 @@
                     >
                   </div>
                 </div>
-                <div
-                  class="p-2 border rounded-3 d-flex align-items-center justify-content-between bg-light-cream"
-                >
-                  <div class="d-flex align-items-center gap-2">
-                    <div
-                      class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center extra-small fw-bold"
-                      style="width: 32px; height: 32px"
-                    >
-                      TA
-                    </div>
-                    <div>
-                      <div class="fw-bold extra-small text-dark">
-                        Trần Tuấn Anh
-                      </div>
-                      <small class="text-muted extra-small"
-                        >Quản Lý Ca Bến Nghé</small
-                      >
-                    </div>
-                  </div>
-                  <div class="text-end">
-                    <span
-                      class="badge bg-success-subtle text-success extra-small"
-                      >13:55:10 • Check-in</span
-                    >
-                  </div>
-                </div>
               </div>
             </div>
 
-            <!-- GIAO DIỆN EMPLOYEE -->
+            <!-- GIAO DIỆN EMPLOYEE (Mặc định ẩn) -->
             <div id="employeeView" class="role-view d-none">
               <div
                 class="p-3 bg-light-cream rounded-3 border border-warning-subtle mb-4 d-flex align-items-center gap-3"
@@ -397,13 +365,13 @@
               </h6>
 
               <div id="personalHistoryList" class="d-flex flex-column gap-2">
-                <!-- Item lịch sử cá nhân sẽ được tạo động khi quét QR -->
+                <!-- Item lịch sử cá nhân -->
               </div>
             </div>
 
             <!-- FOOTER CỘT PHẢI -->
             <div
-              class="pt-3 border-top d-flex justify-content-between align-items-center extra-small text-muted mt-3"
+              class="pt-3 border-top d-flex justify-content-between align-items-center extra-small text-muted"
             >
               <span>Đang kết nối POS Kiosk #01</span>
               <span>Hotline hỗ trợ: <strong>1900 6828</strong></span>
@@ -413,8 +381,6 @@
       </div>
     </div>
 
-    <!-- Bootstrap 5 JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/dashboard.js" asp-append-version="true"></script>
+    <script src="dashboard.js"></script>
   </body>
 </html>

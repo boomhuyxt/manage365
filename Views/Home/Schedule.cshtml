@@ -1,0 +1,1230 @@
+@{
+    Layout = null;
+    ViewData["Title"] = "Retail365 - Bảng Phân Công Ca Làm";
+}
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"]</title>
+    <!-- Bootstrap 5 CSS -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+    />
+    <!-- Font Awesome Icons -->
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    <link rel="stylesheet" href="~/css/retail365.css" asp-append-version="true" />
+  </head>
+  <body class="bg-light-cream min-vh-100 pb-5">
+    <!-- TOP NAVIGATION BAR -->
+    <nav
+      class="navbar navbar-expand-lg bg-white border-bottom px-4 py-2 mb-4 sticky-top shadow-sm"
+    >
+      <div class="container-fluid">
+        <a
+          class="navbar-brand d-flex align-items-center gap-2 fw-bold"
+          href="/"
+        >
+          <div
+            class="brand-icon bg-orange text-white rounded-3 d-flex align-items-center justify-content-center"
+            style="width: 34px; height: 34px"
+          >
+            <i class="fa-solid fa-store fs-6"></i>
+          </div>
+          <span class="fs-6 text-dark"
+            >Retail365
+            <span
+              class="badge bg-warning-subtle text-warning-orange border extra-small ms-1"
+              >Chi Nhánh Q1 - Bến Nghé #104</span
+            >
+          </span>
+        </a>
+
+        <div class="d-flex align-items-center gap-3">
+          <ul
+            class="navbar-nav d-none d-md-flex flex-row gap-3 extra-small fw-semibold"
+          >
+            <li class="nav-item">
+              <a class="nav-link text-secondary" href="/">
+                <i class="fa-solid fa-qrcode me-1"></i> Màn Hình Điểm Danh QR
+              </a>
+            </li>
+            <li class="nav-item">
+              <a
+                class="nav-link text-warning-orange active fw-bold"
+                href="/Home/Schedule"
+              >
+                <i class="fa-solid fa-calendar-days me-1"></i> Bảng Phân Ca &
+                Nhân Sự
+              </a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link text-muted" href="/Account/Login">
+                <i class="fa-solid fa-arrow-right-from-bracket me-1"></i> Đăng
+                Xuất
+              </a>
+            </li>
+          </ul>
+          <div class="d-flex align-items-center gap-2 border-start ps-3">
+            <span
+              class="badge bg-warning-orange text-white extra-small px-2 py-1 rounded-pill"
+            >
+              <i class="fa-solid fa-crown me-1"></i> Quản Trị Viên
+            </span>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+      <!-- HEADER TITLE & STATS -->
+      <div class="row g-3 mb-4 align-items-center">
+        <div class="col-lg-6">
+          <div class="d-flex align-items-center gap-3">
+            <div
+              class="bg-warning-orange text-white p-3 rounded-4 d-flex align-items-center justify-content-center shadow-sm"
+              style="width: 54px; height: 54px"
+            >
+              <i class="fa-solid fa-clipboard-user fs-4"></i>
+            </div>
+            <div>
+              <div
+                class="extra-small text-uppercase text-muted fw-bold tracking-wider"
+              >
+                Hệ Thống Điều Phối Nhân Sự 24/7
+              </div>
+              <h4 class="fw-bold text-dark mb-0">Bảng Phân Công Ca Làm Việc</h4>
+              <small class="text-muted extra-small">
+                Tuần 38 • Từ <strong>15/09/2026</strong> đến
+                <strong>21/09/2026</strong> • Kiosk Quầy 01
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-6">
+          <div class="d-flex justify-content-lg-end gap-2 flex-wrap">
+            <button
+              class="btn btn-outline-secondary btn-sm bg-white extra-small fw-semibold px-3 py-2 rounded-3 shadow-sm"
+              onclick="window.print()"
+            >
+              <i class="fa-solid fa-print me-1"></i> Xuất / In Lịch
+            </button>
+            <button
+              class="btn btn-outline-secondary btn-sm bg-white extra-small fw-semibold px-3 py-2 rounded-3 shadow-sm"
+              onclick="notifyStaff()"
+            >
+              <i class="fa-solid fa-paper-plane me-1 text-primary"></i> Gửi
+              Zalo/SMS Ca
+            </button>
+            <button
+              class="btn btn-warning-orange text-white btn-sm extra-small fw-bold px-3 py-2 rounded-3 shadow-sm"
+              data-bs-toggle="modal"
+              data-bs-target="#modalAddShift"
+            >
+              <i class="fa-solid fa-plus me-1"></i> Phân Ca Mới
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- KPI METRIC CARDS -->
+      <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+          <div
+            class="bg-white p-3 rounded-4 border shadow-sm stat-card-widget d-flex align-items-center justify-content-between"
+          >
+            <div>
+              <small class="text-muted extra-small fw-bold text-uppercase"
+                >Tổng Nhân Sự Ca</small
+              >
+              <div class="fs-4 fw-bold text-dark mt-1" id="statTotalStaff">
+                12 Nhân Viên
+              </div>
+              <small class="text-success extra-small fw-semibold">
+                <i class="fa-solid fa-check-double me-1"></i>100% Đủ quân số
+              </small>
+            </div>
+            <div
+              class="bg-warning-subtle text-warning-orange p-3 rounded-3 fs-5"
+            >
+              <i class="fa-solid fa-users"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+          <div
+            class="bg-white p-3 rounded-4 border shadow-sm stat-card-widget d-flex align-items-center justify-content-between"
+          >
+            <div>
+              <small class="text-muted extra-small fw-bold text-uppercase"
+                >Ca Trực Hôm Nay</small
+              >
+              <div class="fs-4 fw-bold text-dark mt-1">8 Ca Trực</div>
+              <small class="text-muted extra-small">
+                3 Sáng • 3 Chiều • 2 Đêm
+              </small>
+            </div>
+            <div class="bg-primary-subtle text-primary p-3 rounded-3 fs-5">
+              <i class="fa-solid fa-clock"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+          <div
+            class="bg-white p-3 rounded-4 border shadow-sm stat-card-widget d-flex align-items-center justify-content-between"
+          >
+            <div>
+              <small class="text-muted extra-small fw-bold text-uppercase"
+                >Tỉ Lệ Phủ Kiosk</small
+              >
+              <div class="fs-4 fw-bold text-success mt-1">100%</div>
+              <small class="text-muted extra-small">
+                Không có giờ trống quầy
+              </small>
+            </div>
+            <div class="bg-success-subtle text-success p-3 rounded-3 fs-5">
+              <i class="fa-solid fa-shield-halved"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+          <div
+            class="bg-white p-3 rounded-4 border shadow-sm stat-card-widget d-flex align-items-center justify-content-between"
+          >
+            <div>
+              <small class="text-muted extra-small fw-bold text-uppercase"
+                >Yêu Cầu Đổi Ca</small
+              >
+              <div class="fs-4 fw-bold text-warning-orange mt-1">
+                2 Chờ Duyệt
+              </div>
+              <small class="text-danger extra-small fw-semibold">
+                <i class="fa-solid fa-triangle-exclamation me-1"></i>Cần phê
+                duyệt trước 18:00
+              </small>
+            </div>
+            <div class="bg-danger-subtle text-danger p-3 rounded-3 fs-5">
+              <i class="fa-solid fa-arrows-rotate"></i>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- FILTER & CONTROLS BAR -->
+      <div class="bg-white p-3 rounded-4 border shadow-sm mb-4">
+        <div class="row g-3 align-items-center">
+          <!-- Week Navigator -->
+          <div class="col-lg-4">
+            <div class="d-flex align-items-center gap-2">
+              <div class="btn-group shadow-sm">
+                <button
+                  class="btn btn-light btn-sm border extra-small px-2"
+                  onclick="changeWeek(-1)"
+                  title="Tuần trước"
+                >
+                  <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <button
+                  class="btn btn-light btn-sm border extra-small px-3 fw-bold text-dark"
+                  id="currentWeekDisplay"
+                >
+                  <i
+                    class="fa-solid fa-calendar-day me-1 text-warning-orange"
+                  ></i>
+                  Tuần 38 (15/09 - 21/09)
+                </button>
+                <button
+                  class="btn btn-light btn-sm border extra-small px-2"
+                  onclick="changeWeek(1)"
+                  title="Tuần sau"
+                >
+                  <i class="fa-solid fa-chevron-right"></i>
+                </button>
+              </div>
+              <button
+                class="btn btn-outline-secondary btn-sm extra-small fw-semibold rounded-pill px-3"
+                onclick="resetToCurrentWeek()"
+              >
+                Hôm Nay
+              </button>
+            </div>
+          </div>
+
+          <!-- Role Filter Tabs -->
+          <div class="col-lg-5">
+            <div class="d-flex gap-1 flex-wrap">
+              <button
+                class="btn btn-sm btn-outline-secondary rounded-pill extra-small px-3 filter-btn-pill active"
+                onclick="filterRole('all', this)"
+              >
+                Tất Cả (12)
+              </button>
+              <button
+                class="btn btn-sm btn-outline-secondary rounded-pill extra-small px-3 filter-btn-pill"
+                onclick="filterRole('cashier', this)"
+              >
+                Thu Ngân (5)
+              </button>
+              <button
+                class="btn btn-sm btn-outline-secondary rounded-pill extra-small px-3 filter-btn-pill"
+                onclick="filterRole('sales', this)"
+              >
+                Bán Hàng (4)
+              </button>
+              <button
+                class="btn btn-sm btn-outline-secondary rounded-pill extra-small px-3 filter-btn-pill"
+                onclick="filterRole('stock', this)"
+              >
+                Kiểm Kho (2)
+              </button>
+              <button
+                class="btn btn-sm btn-outline-secondary rounded-pill extra-small px-3 filter-btn-pill"
+                onclick="filterRole('lead', this)"
+              >
+                Trưởng Ca (1)
+              </button>
+            </div>
+          </div>
+
+          <!-- Search Input -->
+          <div class="col-lg-3">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text bg-light border-end-0 text-muted">
+                <i class="fa-solid fa-magnifying-glass"></i>
+              </span>
+              <input
+                type="text"
+                id="searchStaffInput"
+                class="form-control border-start-0 bg-light shadow-none extra-small"
+                placeholder="Tìm tên hoặc mã nhân viên..."
+                onkeyup="searchStaff()"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SHIFT SCHEDULE TABLE CARD -->
+      <div class="bg-white rounded-4 border shadow-sm overflow-hidden mb-4">
+        <!-- Table Legend Bar -->
+        <div
+          class="d-flex align-items-center justify-content-between p-3 border-bottom bg-light flex-wrap gap-2"
+        >
+          <div class="d-flex align-items-center gap-3 extra-small flex-wrap">
+            <span class="fw-bold text-secondary text-uppercase"
+              ><i class="fa-solid fa-circle-info me-1"></i>Quy Ước Ca:</span
+            >
+            <span class="badge shift-morning border px-2 py-1">
+              <i class="fa-regular fa-sun me-1"></i> Ca Sáng (06:00 - 14:00)
+            </span>
+            <span class="badge shift-afternoon border px-2 py-1">
+              <i class="fa-solid fa-cloud-sun me-1"></i> Ca Chiều (14:00 -
+              22:00)
+            </span>
+            <span class="badge shift-night border px-2 py-1">
+              <i class="fa-regular fa-moon me-1"></i> Ca Đêm (22:00 - 06:00)
+              <span class="badge bg-danger ms-1">+30% Lương</span>
+            </span>
+            <span class="badge shift-off border px-2 py-1">
+              <i class="fa-solid fa-mug-hot me-1"></i> Nghỉ Ca (OFF)
+            </span>
+          </div>
+          <div class="extra-small text-muted">
+            <i class="fa-solid fa-hand-pointer me-1"></i> Bấm vào ô để điều
+            chỉnh ca nhanh
+          </div>
+        </div>
+
+        <!-- The Main Table -->
+        <div class="table-responsive">
+          <table
+            class="table table-schedule align-middle mb-0"
+            id="scheduleTable"
+          >
+            <thead>
+              <tr>
+                <th style="min-width: 220px" class="ps-4">Nhân Viên</th>
+                <th style="min-width: 130px" class="text-center">
+                  Thứ Hai<br /><span class="fw-normal text-muted extra-small"
+                    >15/09</span
+                  >
+                </th>
+                <th style="min-width: 130px" class="text-center">
+                  Thứ Ba<br /><span class="fw-normal text-muted extra-small"
+                    >16/09</span
+                  >
+                </th>
+                <th style="min-width: 130px" class="text-center">
+                  Thứ Tư<br /><span class="fw-normal text-muted extra-small"
+                    >17/09</span
+                  >
+                </th>
+                <th style="min-width: 130px" class="text-center">
+                  Thứ Năm<br /><span class="fw-normal text-muted extra-small"
+                    >18/09</span
+                  >
+                </th>
+                <th style="min-width: 130px" class="text-center">
+                  Thứ Sáu<br /><span class="fw-normal text-muted extra-small"
+                    >19/09</span
+                  >
+                </th>
+                <th style="min-width: 130px" class="text-center col-today">
+                  <div
+                    class="badge bg-warning-orange text-white extra-small mb-1"
+                  >
+                    HÔM NAY
+                  </div>
+                  <br />
+                  Thứ Bảy<br /><span
+                    class="fw-bold text-warning-orange extra-small"
+                    >20/09</span
+                  >
+                </th>
+                <th style="min-width: 130px" class="text-center">
+                  Chủ Nhật<br /><span class="fw-normal text-muted extra-small"
+                    >21/09</span
+                  >
+                </th>
+              </tr>
+            </thead>
+            <tbody id="scheduleTableBody">
+              <!-- ROW 1: Trưởng ca -->
+              <tr
+                data-role="lead"
+                data-name="Trần Minh Khang"
+                data-code="QM-10101"
+              >
+                <td class="ps-4">
+                  <div class="d-flex align-items-center gap-3">
+                    <div
+                      class="bg-warning-orange text-white rounded-circle d-flex align-items-center justify-content-center fw-bold extra-small"
+                      style="width: 38px; height: 38px"
+                    >
+                      TMK
+                    </div>
+                    <div>
+                      <div class="fw-bold text-dark small staff-name">
+                        Trần Minh Khang
+                      </div>
+                      <div class="extra-small text-muted">
+                        Mã: <strong class="staff-code">QM-10101</strong>
+                      </div>
+                      <span
+                        class="badge bg-warning-subtle text-warning-orange border extra-small py-0"
+                        >Trưởng Ca</span
+                      >
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-morning"
+                    onclick="quickEditShift(this, 'Trần Minh Khang', 'Thứ Hai')"
+                  >
+                    <span><i class="fa-regular fa-sun me-1"></i> Ca Sáng</span>
+                    <small class="opacity-75">06:00 - 14:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-morning"
+                    onclick="quickEditShift(this, 'Trần Minh Khang', 'Thứ Ba')"
+                  >
+                    <span><i class="fa-regular fa-sun me-1"></i> Ca Sáng</span>
+                    <small class="opacity-75">06:00 - 14:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-morning"
+                    onclick="quickEditShift(this, 'Trần Minh Khang', 'Thứ Tư')"
+                  >
+                    <span><i class="fa-regular fa-sun me-1"></i> Ca Sáng</span>
+                    <small class="opacity-75">06:00 - 14:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-afternoon"
+                    onclick="quickEditShift(this, 'Trần Minh Khang', 'Thứ Năm')"
+                  >
+                    <span
+                      ><i class="fa-solid fa-cloud-sun me-1"></i> Ca Chiều</span
+                    >
+                    <small class="opacity-75">14:00 - 22:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-afternoon"
+                    onclick="quickEditShift(this, 'Trần Minh Khang', 'Thứ Sáu')"
+                  >
+                    <span
+                      ><i class="fa-solid fa-cloud-sun me-1"></i> Ca Chiều</span
+                    >
+                    <small class="opacity-75">14:00 - 22:00</small>
+                  </div>
+                </td>
+                <td class="col-today">
+                  <div
+                    class="shift-badge-cell shift-morning"
+                    onclick="quickEditShift(this, 'Trần Minh Khang', 'Thứ Bảy')"
+                  >
+                    <span><i class="fa-regular fa-sun me-1"></i> Ca Sáng</span>
+                    <small class="opacity-75">06:00 - 14:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-off"
+                    onclick="
+                      quickEditShift(this, 'Trần Minh Khang', 'Chủ Nhật')
+                    "
+                  >
+                    <span
+                      ><i class="fa-solid fa-mug-hot me-1"></i> Nghỉ Ca</span
+                    >
+                    <small class="opacity-75">Nghỉ tuần</small>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- ROW 2: Thu ngân -->
+              <tr
+                data-role="cashier"
+                data-name="Nguyễn Thảo My"
+                data-code="QM-88219"
+              >
+                <td class="ps-4">
+                  <div class="d-flex align-items-center gap-3">
+                    <div
+                      class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold extra-small"
+                      style="width: 38px; height: 38px"
+                    >
+                      NTM
+                    </div>
+                    <div>
+                      <div class="fw-bold text-dark small staff-name">
+                        Nguyễn Thảo My
+                      </div>
+                      <div class="extra-small text-muted">
+                        Mã: <strong class="staff-code">QM-88219</strong>
+                      </div>
+                      <span
+                        class="badge bg-primary-subtle text-primary border extra-small py-0"
+                        >Thu Ngân 01</span
+                      >
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-afternoon"
+                    onclick="quickEditShift(this, 'Nguyễn Thảo My', 'Thứ Hai')"
+                  >
+                    <span
+                      ><i class="fa-solid fa-cloud-sun me-1"></i> Ca Chiều</span
+                    >
+                    <small class="opacity-75">14:00 - 22:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-afternoon"
+                    onclick="quickEditShift(this, 'Nguyễn Thảo My', 'Thứ Ba')"
+                  >
+                    <span
+                      ><i class="fa-solid fa-cloud-sun me-1"></i> Ca Chiều</span
+                    >
+                    <small class="opacity-75">14:00 - 22:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-off"
+                    onclick="quickEditShift(this, 'Nguyễn Thảo My', 'Thứ Tư')"
+                  >
+                    <span
+                      ><i class="fa-solid fa-mug-hot me-1"></i> Nghỉ Ca</span
+                    >
+                    <small class="opacity-75">Nghỉ phép</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-morning"
+                    onclick="quickEditShift(this, 'Nguyễn Thảo My', 'Thứ Năm')"
+                  >
+                    <span><i class="fa-regular fa-sun me-1"></i> Ca Sáng</span>
+                    <small class="opacity-75">06:00 - 14:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-morning"
+                    onclick="quickEditShift(this, 'Nguyễn Thảo My', 'Thứ Sáu')"
+                  >
+                    <span><i class="fa-regular fa-sun me-1"></i> Ca Sáng</span>
+                    <small class="opacity-75">06:00 - 14:00</small>
+                  </div>
+                </td>
+                <td class="col-today">
+                  <div
+                    class="shift-badge-cell shift-afternoon"
+                    onclick="quickEditShift(this, 'Nguyễn Thảo My', 'Thứ Bảy')"
+                  >
+                    <span
+                      ><i class="fa-solid fa-cloud-sun me-1"></i> Ca Chiều</span
+                    >
+                    <small class="opacity-75">14:00 - 22:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-afternoon"
+                    onclick="quickEditShift(this, 'Nguyễn Thảo My', 'Chủ Nhật')"
+                  >
+                    <span
+                      ><i class="fa-solid fa-cloud-sun me-1"></i> Ca Chiều</span
+                    >
+                    <small class="opacity-75">14:00 - 22:00</small>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- ROW 3: Thu ngân Đêm -->
+              <tr
+                data-role="cashier"
+                data-name="Lê Hoàng Long"
+                data-code="QM-77342"
+              >
+                <td class="ps-4">
+                  <div class="d-flex align-items-center gap-3">
+                    <div
+                      class="text-white rounded-circle d-flex align-items-center justify-content-center fw-bold extra-small"
+                      style="
+                        width: 38px;
+                        height: 38px;
+                        background-color: #6d28d9;
+                      "
+                    >
+                      LHL
+                    </div>
+                    <div>
+                      <div class="fw-bold text-dark small staff-name">
+                        Lê Hoàng Long
+                      </div>
+                      <div class="extra-small text-muted">
+                        Mã: <strong class="staff-code">QM-77342</strong>
+                      </div>
+                      <span
+                        class="badge bg-secondary-subtle text-dark border extra-small py-0"
+                        >Thu Ngân Đêm</span
+                      >
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-night"
+                    onclick="quickEditShift(this, 'Lê Hoàng Long', 'Thứ Hai')"
+                  >
+                    <span><i class="fa-regular fa-moon me-1"></i> Ca Đêm</span>
+                    <small class="opacity-75">22:00 - 06:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-night"
+                    onclick="quickEditShift(this, 'Lê Hoàng Long', 'Thứ Ba')"
+                  >
+                    <span><i class="fa-regular fa-moon me-1"></i> Ca Đêm</span>
+                    <small class="opacity-75">22:00 - 06:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-night"
+                    onclick="quickEditShift(this, 'Lê Hoàng Long', 'Thứ Tư')"
+                  >
+                    <span><i class="fa-regular fa-moon me-1"></i> Ca Đêm</span>
+                    <small class="opacity-75">22:00 - 06:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-night"
+                    onclick="quickEditShift(this, 'Lê Hoàng Long', 'Thứ Năm')"
+                  >
+                    <span><i class="fa-regular fa-moon me-1"></i> Ca Đêm</span>
+                    <small class="opacity-75">22:00 - 06:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-off"
+                    onclick="quickEditShift(this, 'Lê Hoàng Long', 'Thứ Sáu')"
+                  >
+                    <span
+                      ><i class="fa-solid fa-mug-hot me-1"></i> Nghỉ Ca</span
+                    >
+                    <small class="opacity-75">Nghỉ bù</small>
+                  </div>
+                </td>
+                <td class="col-today">
+                  <div
+                    class="shift-badge-cell shift-night"
+                    onclick="quickEditShift(this, 'Lê Hoàng Long', 'Thứ Bảy')"
+                  >
+                    <span><i class="fa-regular fa-moon me-1"></i> Ca Đêm</span>
+                    <small class="opacity-75">22:00 - 06:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-night"
+                    onclick="quickEditShift(this, 'Lê Hoàng Long', 'Chủ Nhật')"
+                  >
+                    <span><i class="fa-regular fa-moon me-1"></i> Ca Đêm</span>
+                    <small class="opacity-75">22:00 - 06:00</small>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- ROW 4: Bán hàng -->
+              <tr
+                data-role="sales"
+                data-name="Phạm Gia Hân"
+                data-code="QM-55410"
+              >
+                <td class="ps-4">
+                  <div class="d-flex align-items-center gap-3">
+                    <div
+                      class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center fw-bold extra-small"
+                      style="width: 38px; height: 38px"
+                    >
+                      PGH
+                    </div>
+                    <div>
+                      <div class="fw-bold text-dark small staff-name">
+                        Phạm Gia Hân
+                      </div>
+                      <div class="extra-small text-muted">
+                        Mã: <strong class="staff-code">QM-55410</strong>
+                      </div>
+                      <span
+                        class="badge bg-success-subtle text-success border extra-small py-0"
+                        >Bán Hàng</span
+                      >
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-morning"
+                    onclick="quickEditShift(this, 'Phạm Gia Hân', 'Thứ Hai')"
+                  >
+                    <span><i class="fa-regular fa-sun me-1"></i> Ca Sáng</span>
+                    <small class="opacity-75">06:00 - 14:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-morning"
+                    onclick="quickEditShift(this, 'Phạm Gia Hân', 'Thứ Ba')"
+                  >
+                    <span><i class="fa-regular fa-sun me-1"></i> Ca Sáng</span>
+                    <small class="opacity-75">06:00 - 14:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-morning"
+                    onclick="quickEditShift(this, 'Phạm Gia Hân', 'Thứ Tư')"
+                  >
+                    <span><i class="fa-regular fa-sun me-1"></i> Ca Sáng</span>
+                    <small class="opacity-75">06:00 - 14:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-morning"
+                    onclick="quickEditShift(this, 'Phạm Gia Hân', 'Thứ Năm')"
+                  >
+                    <span><i class="fa-regular fa-sun me-1"></i> Ca Sáng</span>
+                    <small class="opacity-75">06:00 - 14:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-off"
+                    onclick="quickEditShift(this, 'Phạm Gia Hân', 'Thứ Sáu')"
+                  >
+                    <span
+                      ><i class="fa-solid fa-mug-hot me-1"></i> Nghỉ Ca</span
+                    >
+                    <small class="opacity-75">Nghỉ tuần</small>
+                  </div>
+                </td>
+                <td class="col-today">
+                  <div
+                    class="shift-badge-cell shift-morning"
+                    onclick="quickEditShift(this, 'Phạm Gia Hân', 'Thứ Bảy')"
+                  >
+                    <span><i class="fa-regular fa-sun me-1"></i> Ca Sáng</span>
+                    <small class="opacity-75">06:00 - 14:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-morning"
+                    onclick="quickEditShift(this, 'Phạm Gia Hân', 'Chủ Nhật')"
+                  >
+                    <span><i class="fa-regular fa-sun me-1"></i> Ca Sáng</span>
+                    <small class="opacity-75">06:00 - 14:00</small>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- ROW 5: Bán hàng -->
+              <tr
+                data-role="sales"
+                data-name="Đỗ Quốc Huy"
+                data-code="QM-66129"
+              >
+                <td class="ps-4">
+                  <div
+                    class="bg-info text-white rounded-circle d-flex align-items-center justify-content-center fw-bold extra-small"
+                    style="width: 38px; height: 38px"
+                  >
+                    DQH
+                  </div>
+                  <div>
+                    <div class="fw-bold text-dark small staff-name">
+                      Đỗ Quốc Huy
+                    </div>
+                    <div class="extra-small text-muted">
+                      Mã: <strong class="staff-code">QM-66129</strong>
+                    </div>
+                    <span
+                      class="badge bg-info-subtle text-dark border extra-small py-0"
+                      >Bán Hàng</span
+                    >
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-afternoon"
+                    onclick="quickEditShift(this, 'Đỗ Quốc Huy', 'Thứ Hai')"
+                  >
+                    <span
+                      ><i class="fa-solid fa-cloud-sun me-1"></i> Ca Chiều</span
+                    >
+                    <small class="opacity-75">14:00 - 22:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-afternoon"
+                    onclick="quickEditShift(this, 'Đỗ Quốc Huy', 'Thứ Ba')"
+                  >
+                    <span
+                      ><i class="fa-solid fa-cloud-sun me-1"></i> Ca Chiều</span
+                    >
+                    <small class="opacity-75">14:00 - 22:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-afternoon"
+                    onclick="quickEditShift(this, 'Đỗ Quốc Huy', 'Thứ Tư')"
+                  >
+                    <span
+                      ><i class="fa-solid fa-cloud-sun me-1"></i> Ca Chiều</span
+                    >
+                    <small class="opacity-75">14:00 - 22:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-off"
+                    onclick="quickEditShift(this, 'Đỗ Quốc Huy', 'Thứ Năm')"
+                  >
+                    <span
+                      ><i class="fa-solid fa-mug-hot me-1"></i> Nghỉ Ca</span
+                    >
+                    <small class="opacity-75">Nghỉ tuần</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-afternoon"
+                    onclick="quickEditShift(this, 'Đỗ Quốc Huy', 'Thứ Sáu')"
+                  >
+                    <span
+                      ><i class="fa-solid fa-cloud-sun me-1"></i> Ca Chiều</span
+                    >
+                    <small class="opacity-75">14:00 - 22:00</small>
+                  </div>
+                </td>
+                <td class="col-today">
+                  <div
+                    class="shift-badge-cell shift-afternoon"
+                    onclick="quickEditShift(this, 'Đỗ Quốc Huy', 'Thứ Bảy')"
+                  >
+                    <span
+                      ><i class="fa-solid fa-cloud-sun me-1"></i> Ca Chiều</span
+                    >
+                    <small class="opacity-75">14:00 - 22:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-afternoon"
+                    onclick="quickEditShift(this, 'Đỗ Quốc Huy', 'Chủ Nhật')"
+                  >
+                    <span
+                      ><i class="fa-solid fa-cloud-sun me-1"></i> Ca Chiều</span
+                    >
+                    <small class="opacity-75">14:00 - 22:00</small>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- ROW 6: Kiểm kho -->
+              <tr data-role="stock" data-name="Vũ Đức Anh" data-code="QM-33019">
+                <td class="ps-4">
+                  <div class="d-flex align-items-center gap-3">
+                    <div
+                      class="bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center fw-bold extra-small"
+                      style="width: 38px; height: 38px"
+                    >
+                      VDA
+                    </div>
+                    <div>
+                      <div class="fw-bold text-dark small staff-name">
+                        Vũ Đức Anh
+                      </div>
+                      <div class="extra-small text-muted">
+                        Mã: <strong class="staff-code">QM-33019</strong>
+                      </div>
+                      <span
+                        class="badge bg-secondary-subtle text-secondary border extra-small py-0"
+                        >Kiểm Kho</span
+                      >
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-morning"
+                    onclick="quickEditShift(this, 'Vũ Đức Anh', 'Thứ Hai')"
+                  >
+                    <span><i class="fa-regular fa-sun me-1"></i> Ca Sáng</span>
+                    <small class="opacity-75">06:00 - 14:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-morning"
+                    onclick="quickEditShift(this, 'Vũ Đức Anh', 'Thứ Ba')"
+                  >
+                    <span><i class="fa-regular fa-sun me-1"></i> Ca Sáng</span>
+                    <small class="opacity-75">06:00 - 14:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-morning"
+                    onclick="quickEditShift(this, 'Vũ Đức Anh', 'Thứ Tư')"
+                  >
+                    <span><i class="fa-regular fa-sun me-1"></i> Ca Sáng</span>
+                    <small class="opacity-75">06:00 - 14:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-morning"
+                    onclick="quickEditShift(this, 'Vũ Đức Anh', 'Thứ Năm')"
+                  >
+                    <span><i class="fa-regular fa-sun me-1"></i> Ca Sáng</span>
+                    <small class="opacity-75">06:00 - 14:00</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-morning"
+                    onclick="quickEditShift(this, 'Vũ Đức Anh', 'Thứ Sáu')"
+                  >
+                    <span><i class="fa-regular fa-sun me-1"></i> Ca Sáng</span>
+                    <small class="opacity-75">06:00 - 14:00</small>
+                  </div>
+                </td>
+                <td class="col-today">
+                  <div
+                    class="shift-badge-cell shift-off"
+                    onclick="quickEditShift(this, 'Vũ Đức Anh', 'Thứ Bảy')"
+                  >
+                    <span
+                      ><i class="fa-solid fa-mug-hot me-1"></i> Nghỉ Ca</span
+                    >
+                    <small class="opacity-75">Nghỉ cuối tuần</small>
+                  </div>
+                </td>
+                <td>
+                  <div
+                    class="shift-badge-cell shift-off"
+                    onclick="quickEditShift(this, 'Vũ Đức Anh', 'Chủ Nhật')"
+                  >
+                    <span
+                      ><i class="fa-solid fa-mug-hot me-1"></i> Nghỉ Ca</span
+                    >
+                    <small class="opacity-75">Nghỉ cuối tuần</small>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODAL: PHÂN CA / ĐỔI CA MỚI -->
+    <div
+      class="modal fade"
+      id="modalAddShift"
+      tabindex="-1"
+      aria-labelledby="modalAddShiftLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+          <div class="modal-header border-bottom px-4 pt-4 pb-3">
+            <div class="d-flex align-items-center gap-2">
+              <div class="bg-warning-subtle text-warning-orange p-2 rounded-3">
+                <i class="fa-solid fa-calendar-plus fs-5"></i>
+              </div>
+              <div>
+                <h6
+                  class="modal-title fw-bold text-dark mb-0"
+                  id="modalAddShiftLabel"
+                >
+                  Phân Công / Đổi Ca Làm
+                </h6>
+                <small class="text-muted extra-small"
+                  >Cập nhật lịch làm việc nhân sự quầy Retail365</small
+                >
+              </div>
+            </div>
+            <button
+              type="button"
+              class="btn-close shadow-none"
+              data-bs-dismiss="modal"
+              aria-label="Đóng"
+            ></button>
+          </div>
+          <div class="modal-body px-4 py-3">
+            <form id="shiftAssignmentForm" onsubmit="handleSaveShift(event)">
+              <!-- Chọn nhân viên -->
+              <div class="mb-3">
+                <label class="form-label extra-small fw-bold text-secondary">
+                  Chọn Nhân Viên <span class="text-danger">*</span>
+                </label>
+                <select
+                  class="form-select shadow-none extra-small fw-semibold"
+                  id="shiftStaffSelect"
+                  required
+                >
+                  <option value="Trần Minh Khang">
+                    Trần Minh Khang (QM-10101 - Trưởng Ca)
+                  </option>
+                  <option value="Nguyễn Thảo My" selected>
+                    Nguyễn Thảo My (QM-88219 - Thu Ngân)
+                  </option>
+                  <option value="Lê Hoàng Long">
+                    Lê Hoàng Long (QM-77342 - Thu Ngân Đêm)
+                  </option>
+                  <option value="Phạm Gia Hân">
+                    Phạm Gia Hân (QM-55410 - Bán Hàng)
+                  </option>
+                  <option value="Đỗ Quốc Huy">
+                    Đỗ Quốc Huy (QM-66129 - Bán Hàng)
+                  </option>
+                  <option value="Vũ Đức Anh">
+                    Vũ Đức Anh (QM-33019 - Kiểm Kho)
+                  </option>
+                </select>
+              </div>
+
+              <!-- Chọn ngày làm việc -->
+              <div class="mb-3">
+                <label class="form-label extra-small fw-bold text-secondary">
+                  Ngày Áp Dụng <span class="text-danger">*</span>
+                </label>
+                <select
+                  class="form-select shadow-none extra-small fw-semibold"
+                  id="shiftDaySelect"
+                  required
+                >
+                  <option value="Thứ Hai">Thứ Hai (15/09)</option>
+                  <option value="Thứ Ba">Thứ Ba (16/09)</option>
+                  <option value="Thứ Tư">Thứ Tư (17/09)</option>
+                  <option value="Thứ Năm">Thứ Năm (18/09)</option>
+                  <option value="Thứ Sáu">Thứ Sáu (19/09)</option>
+                  <option value="Thứ Bảy" selected>
+                    Thứ Bảy - Hôm Nay (20/09)
+                  </option>
+                  <option value="Chủ Nhật">Chủ Nhật (21/09)</option>
+                </select>
+              </div>
+
+              <!-- Loại ca -->
+              <div class="mb-3">
+                <label class="form-label extra-small fw-bold text-secondary">
+                  Ca Làm Việc <span class="text-danger">*</span>
+                </label>
+                <div class="d-flex flex-column gap-2">
+                  <div
+                    class="form-check p-2 border rounded-3 bg-light d-flex align-items-center gap-2"
+                  >
+                    <input
+                      class="form-check-input ms-0 mt-0"
+                      type="radio"
+                      name="shiftTypeRadio"
+                      id="radioMorning"
+                      value="morning"
+                      checked
+                    />
+                    <label
+                      class="form-check-label extra-small fw-bold text-dark w-100"
+                      for="radioMorning"
+                    >
+                      <i class="fa-regular fa-sun text-warning me-1"></i> Ca
+                      Sáng (06:00 - 14:00)
+                    </label>
+                  </div>
+                  <div
+                    class="form-check p-2 border rounded-3 bg-light d-flex align-items-center gap-2"
+                  >
+                    <input
+                      class="form-check-input ms-0 mt-0"
+                      type="radio"
+                      name="shiftTypeRadio"
+                      id="radioAfternoon"
+                      value="afternoon"
+                    />
+                    <label
+                      class="form-check-label extra-small fw-bold text-dark w-100"
+                      for="radioAfternoon"
+                    >
+                      <i class="fa-solid fa-cloud-sun text-primary me-1"></i> Ca
+                      Chiều (14:00 - 22:00)
+                    </label>
+                  </div>
+                  <div
+                    class="form-check p-2 border rounded-3 bg-light d-flex align-items-center gap-2"
+                  >
+                    <input
+                      class="form-check-input ms-0 mt-0"
+                      type="radio"
+                      name="shiftTypeRadio"
+                      id="radioNight"
+                      value="night"
+                    />
+                    <label
+                      class="form-check-label extra-small fw-bold text-dark w-100"
+                      for="radioNight"
+                    >
+                      <i
+                        class="fa-regular fa-moon text-purple me-1"
+                        style="color: #6d28d9"
+                      ></i>
+                      Ca Đêm (22:00 - 06:00)
+                      <span class="badge bg-danger ms-1">+30% Phụ Cấp</span>
+                    </label>
+                  </div>
+                  <div
+                    class="form-check p-2 border rounded-3 bg-light d-flex align-items-center gap-2"
+                  >
+                    <input
+                      class="form-check-input ms-0 mt-0"
+                      type="radio"
+                      name="shiftTypeRadio"
+                      id="radioOff"
+                      value="off"
+                    />
+                    <label
+                      class="form-check-label extra-small fw-bold text-dark w-100"
+                      for="radioOff"
+                    >
+                      <i class="fa-solid fa-mug-hot text-secondary me-1"></i>
+                      Nghỉ Ca (OFF)
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Ghi chú phân ca -->
+              <div class="mb-3">
+                <label class="form-label extra-small fw-bold text-secondary"
+                  >Ghi Chú Phân Ca / Lý Do Đổi Ca</label
+                >
+                <input
+                  type="text"
+                  class="form-control shadow-none extra-small"
+                  id="shiftNoteInput"
+                  placeholder="Ví dụ: Đổi ca do bận việc gia đình, đã thỏa thuận..."
+                />
+              </div>
+
+              <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+                <button
+                  type="button"
+                  class="btn btn-light extra-small fw-semibold px-3 py-2 border rounded-3"
+                  data-bs-dismiss="modal"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  class="btn btn-warning-orange text-white extra-small fw-bold px-4 py-2 rounded-3 shadow-sm"
+                >
+                  <i class="fa-solid fa-floppy-disk me-1"></i> Lưu Phân Ca
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toastNotification" class="toast-notification d-none">
+      <div
+        class="alert alert-success border-0 shadow-lg d-flex align-items-center gap-2 py-3 px-3 rounded-4 mb-0"
+      >
+        <i class="fa-solid fa-circle-check fs-4"></i>
+        <div>
+          <div class="fw-bold extra-small" id="toastTitle">Thành Công!</div>
+          <div class="extra-small" id="toastMessage">
+            Thông tin ca làm việc đã được cập nhật.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bootstrap 5 JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/schedule.js" asp-append-version="true"></script>
+  </body>
+</html>
