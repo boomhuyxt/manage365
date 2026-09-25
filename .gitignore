@@ -363,4 +363,9 @@ MigrationBackup/
 FodyWeavers.xsd
 
 # Antigravity Kit
-.agents/
+.agents/
+
+# Local environment secrets
+.env
+.env.*
+!.env.example

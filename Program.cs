@@ -1,8 +1,11 @@
 using System.Text;
 using System.Threading.RateLimiting;
+using manage365.Repositories.Auth;
 using manage365.Routes.API.Auth;
+using manage365.Routes.API.Health;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -51,7 +54,34 @@ builder.Services
     });
 builder.Services.AddAuthorization();
 
-builder.Services.AddSingleton<IUserStore, InMemoryUserStore>();
+var databaseConnectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(databaseConnectionString))
+{
+    throw new InvalidOperationException("ConnectionStrings:DefaultConnection is required.");
+}
+
+var databaseConnection = new NpgsqlConnectionStringBuilder(databaseConnectionString);
+var databaseHost = builder.Configuration["Database:Host"];
+var databaseUsername = builder.Configuration["Database:Username"];
+
+if (!string.IsNullOrWhiteSpace(databaseHost))
+{
+    databaseConnection.Host = databaseHost;
+}
+
+if (builder.Configuration.GetValue<int?>("Database:Port") is { } databasePort)
+{
+    databaseConnection.Port = databasePort;
+}
+
+if (!string.IsNullOrWhiteSpace(databaseUsername))
+{
+    databaseConnection.Username = databaseUsername;
+}
+
+builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(databaseConnection.ConnectionString));
+
+builder.Services.AddScoped<IUserRepository, PostgresUserRepository>();
 builder.Services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 
@@ -101,6 +131,7 @@ app.UseAuthorization();
 
 app.MapStaticAssets();
 app.MapControllers();
+app.MapDatabaseHealthRoutes();
 
 app.MapControllerRoute(
     name: "default",

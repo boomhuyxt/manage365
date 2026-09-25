@@ -30,6 +30,7 @@ public sealed record AuthResponse(
     UserResponse User);
 
 public sealed record UserResponse(
-    Guid Id,
+    long Id,
     string Email,
-    string DisplayName);
+    string DisplayName,
+    string Role);

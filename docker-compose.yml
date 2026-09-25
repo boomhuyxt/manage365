@@ -6,7 +6,12 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
+    env_file:
+      - .env
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_HTTP_PORTS=8080
       - ASPNETCORE_URLS=http://+:8080
+      - Database__Host=aws-0-ap-northeast-2.pooler.supabase.com
+      - Database__Port=5432
+      - Database__Username=postgres.ardvtdirwjlivkmczzuu

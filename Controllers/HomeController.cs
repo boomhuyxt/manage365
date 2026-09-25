@@ -16,8 +16,8 @@ namespace manage365.Controllers
             return View();
         }
 
-        [Route("/Schedule")]
-        [Route("/Home/Schedule")]
+        [HttpGet("/Schedule")]
+        [HttpGet("/Home/Schedule")]
         public IActionResult Schedule()
         {
             return View();

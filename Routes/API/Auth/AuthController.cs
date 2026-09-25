@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using manage365.Repositories.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -7,7 +8,7 @@ namespace manage365.Routes.API.Auth;
 [ApiController]
 [Route("api/auth")]
 public sealed class AuthController(
-    IUserStore userStore,
+    IUserRepository userRepository,
     IPasswordHasher passwordHasher,
     IJwtTokenService tokenService) : ControllerBase
 {
@@ -15,17 +16,18 @@ public sealed class AuthController(
     [EnableRateLimiting("auth")]
     [ProducesResponseType<AuthResponse>(StatusCodes.Status201Created)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
-    public ActionResult<AuthResponse> Register(RegisterRequest request)
+    public async Task<ActionResult<AuthResponse>> Register(
+        RegisterRequest request,
+        CancellationToken cancellationToken)
     {
-        var email = InMemoryUserStore.NormalizeEmail(request.Email);
-        var user = new User(
-            Guid.NewGuid(),
+        var email = NormalizeEmail(request.Email);
+        var user = await userRepository.TryAddAsync(new NewUser(
             email,
             request.DisplayName.Trim(),
             passwordHasher.Hash(request.Password),
-            DateTimeOffset.UtcNow);
+            "FullTime"), cancellationToken);
 
-        if (!userStore.TryAdd(user))
+        if (user is null)
         {
             return Conflict(new ProblemDetails
             {
@@ -42,10 +44,12 @@ public sealed class AuthController(
     [EnableRateLimiting("auth")]
     [ProducesResponseType<AuthResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
-    public ActionResult<AuthResponse> Login(LoginRequest request)
+    public async Task<ActionResult<AuthResponse>> Login(
+        LoginRequest request,
+        CancellationToken cancellationToken)
     {
-        var email = InMemoryUserStore.NormalizeEmail(request.Email);
-        var user = userStore.FindByEmail(email);
+        var email = NormalizeEmail(request.Email);
+        var user = await userRepository.FindByEmailAsync(email, cancellationToken);
 
         if (user is null || !passwordHasher.Verify(request.Password, user.PasswordHash))
         {
@@ -69,12 +73,14 @@ public sealed class AuthController(
         var email = User.FindFirst(JwtRegisteredClaimNames.Email)?.Value;
         var displayName = User.FindFirst(JwtRegisteredClaimNames.Name)?.Value;
 
-        if (!Guid.TryParse(subject, out var userId) || email is null || displayName is null)
+        var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+
+        if (!long.TryParse(subject, out var userId) || email is null || displayName is null || role is null)
         {
             return Unauthorized();
         }
 
-        return Ok(new UserResponse(userId, email, displayName));
+        return Ok(new UserResponse(userId, email, displayName, role));
     }
 
     private AuthResponse CreateAuthResponse(User user)
@@ -84,6 +90,8 @@ public sealed class AuthController(
             token.Value,
             "Bearer",
             token.ExpiresAtUtc,
-            new UserResponse(user.Id, user.Email, user.DisplayName));
+            new UserResponse(user.Id, user.Email, user.DisplayName, user.Role));
     }
+
+    private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 }
