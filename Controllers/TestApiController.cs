@@ -15,7 +15,7 @@ namespace manage365.Controllers
             return Ok(new
             {
                 status = "success",
-                message = "Swagger đã được tích hợp thành công vào manage365!",
+                message = "Swagger đã được tích hợp thành công vào manage365! huy nè",
                 timestamp = DateTime.UtcNow
             });
         }
