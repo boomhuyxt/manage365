@@ -7,98 +7,154 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function moveIndicator(activeBtn) {
     if (!activeBtn || !indicator) return;
-
-    const width = activeBtn.offsetWidth;
-    const left = activeBtn.offsetLeft;
-
-    indicator.style.width = `${width}px`;
-    indicator.style.transform = `translateX(${left}px)`;
+    indicator.style.width = `${activeBtn.offsetWidth}px`;
+    indicator.style.transform = `translateX(${activeBtn.offsetLeft}px)`;
   }
-
-  // Khởi tạo ban đầu
-  moveIndicator(btnTabLogin);
-
-  window.addEventListener("resize", () => {
-    const activeBtn = document.querySelector(".custom-tab-btn.active");
-    moveIndicator(activeBtn);
-  });
 
   function switchTab(activeBtn, inactiveBtn, showForm, hideForm) {
-    if (activeBtn.classList.contains("active")) return;
-
-    // 1. Trượt thanh indicator
+    if (!activeBtn || !inactiveBtn || !showForm || !hideForm) return;
     moveIndicator(activeBtn);
-
-    // 2. Cập nhật Tab ĐANG CHỌN (Chữ đậm + Icon cam)
     activeBtn.classList.add("active", "text-dark");
     activeBtn.classList.remove("text-secondary");
-
-    const activeIcon = activeBtn.querySelector("i");
-    if (activeIcon) activeIcon.classList.add("text-warning-orange");
-
-    // 3. Cập nhật Tab KHÔNG CHỌN (Chữ nhạt + Bỏ icon cam)
+    activeBtn.querySelector("i")?.classList.add("text-warning-orange");
     inactiveBtn.classList.remove("active", "text-dark");
     inactiveBtn.classList.add("text-secondary");
-
-    const inactiveIcon = inactiveBtn.querySelector("i");
-    if (inactiveIcon) inactiveIcon.classList.remove("text-warning-orange");
-
-    // 4. Chuyển đổi hiệu ứng Form
+    inactiveBtn.querySelector("i")?.classList.remove("text-warning-orange");
     hideForm.classList.remove("active");
-
-    setTimeout(() => {
-      hideForm.classList.add("d-none");
-      showForm.classList.remove("d-none");
-
-      setTimeout(() => {
-        showForm.classList.add("active");
-      }, 20);
-    }, 150);
+    hideForm.classList.add("d-none");
+    showForm.classList.remove("d-none");
+    requestAnimationFrame(() => showForm.classList.add("active"));
   }
 
-  btnTabLogin.addEventListener("click", () => {
+  function showMessage(container, message, type = "danger") {
+    if (!container) return;
+    let alert = container.querySelector("[data-auth-message]");
+    if (!alert) {
+      alert = document.createElement("div");
+      alert.dataset.authMessage = "true";
+      container.prepend(alert);
+    }
+    alert.className = `alert alert-${type} py-2 small`;
+    alert.textContent = message;
+  }
+
+  function clearMessage(container) {
+    container?.querySelector("[data-auth-message]")?.remove();
+  }
+
+  function getErrorMessage(payload, fallback) {
+    if (payload?.title) return payload.title;
+    if (payload?.errors) {
+      const firstError = Object.values(payload.errors).flat()[0];
+      if (firstError) return firstError;
+    }
+    return fallback;
+  }
+
+  function saveSession(authResponse, remember) {
+    const storage = remember ? localStorage : sessionStorage;
+    const otherStorage = remember ? sessionStorage : localStorage;
+
+    for (const key of ["accessToken", "tokenExpiresAtUtc", "user"]) {
+      otherStorage.removeItem(key);
+    }
+
+    storage.setItem("accessToken", authResponse.accessToken);
+    storage.setItem("tokenExpiresAtUtc", authResponse.expiresAtUtc);
+    storage.setItem("user", JSON.stringify(authResponse.user));
+  }
+
+  async function sendAuthRequest(url, body) {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    let payload = null;
+    try {
+      payload = await response.json();
+    } catch {
+      // The status code still provides a useful fallback message.
+    }
+
+    if (!response.ok) {
+      const error = new Error(getErrorMessage(payload, "Không thể xác thực tài khoản."));
+      error.status = response.status;
+      throw error;
+    }
+
+    return payload;
+  }
+
+  moveIndicator(btnTabLogin);
+  window.addEventListener("resize", () => {
+    moveIndicator(document.querySelector(".custom-tab-btn.active"));
+  });
+
+  btnTabLogin?.addEventListener("click", () => {
     switchTab(btnTabLogin, btnTabRegister, loginForm, registerForm);
   });
 
-  btnTabRegister.addEventListener("click", () => {
+  btnTabRegister?.addEventListener("click", () => {
     switchTab(btnTabRegister, btnTabLogin, registerForm, loginForm);
   });
 
-  // Handle Login Submit
-  const loginFormEl = loginForm.querySelector("form");
-  if (loginFormEl) {
-    loginFormEl.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const usernameInput = loginFormEl.querySelector('input[type="text"]');
-      const username = usernameInput ? usernameInput.value.trim() : "Quản Trị Viên";
-      const isAdmin = username.toLowerCase().includes("admin") || username === "" || username.toLowerCase().includes("quan tri");
-      const user = {
-        empId: isAdmin ? "ADMIN-01" : "NV-8829",
-        name: username || (isAdmin ? "Quản Trị Viên" : "Nguyễn Văn An"),
-        role: isAdmin ? "admin" : "employee",
-        dept: isAdmin ? "Ban Quản Trị Hệ Thống" : "Quầy Thu Ngân 01"
-      };
-      localStorage.setItem("user", JSON.stringify(user));
-      window.location.href = isAdmin ? "/Home/Schedule" : "/";
-    });
-  }
+  const loginFormEl = loginForm?.querySelector("form");
+  loginFormEl?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    clearMessage(loginForm);
 
-  // Handle Register Submit
-  const registerFormEl = registerForm.querySelector("form");
-  if (registerFormEl) {
-    registerFormEl.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const nameInput = registerFormEl.querySelector('input[placeholder="Nguyễn Văn A"]');
-      const name = nameInput ? nameInput.value.trim() : "Quản Trị Viên Mới";
-      const user = {
-        empId: "ADM-" + Math.floor(1000 + Math.random() * 9000),
-        name: name || "Quản Trị Viên Mới",
-        role: "admin",
-        dept: "Ban Quản Trị Kiosk"
-      };
-      localStorage.setItem("user", JSON.stringify(user));
-      alert("Đăng ký tài khoản thành công! Đang chuyển hướng vào hệ thống...");
-      window.location.href = "/Home/Schedule";
-    });
-  }
+    const submitButton = loginFormEl.querySelector('button[type="submit"]');
+    const email = loginFormEl.querySelector('[name="username"]')?.value.trim();
+    const password = loginFormEl.querySelector('[name="password"]')?.value ?? "";
+    const remember = document.getElementById("rememberMe")?.checked ?? true;
+
+    submitButton.disabled = true;
+    try {
+      const authResponse = await sendAuthRequest("/api/auth/login", { email, password });
+      saveSession(authResponse, remember);
+      window.location.assign("/");
+    } catch (error) {
+      const message = error.status === 401
+        ? "Email hoặc mật khẩu không chính xác."
+        : error.status === 429
+          ? "Bạn đăng nhập quá nhiều lần. Vui lòng thử lại sau."
+          : error.message;
+      showMessage(loginForm, message);
+    } finally {
+      submitButton.disabled = false;
+    }
+  });
+
+  const registerFormEl = registerForm?.querySelector("form");
+  registerFormEl?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    clearMessage(registerForm);
+
+    const submitButton = registerFormEl.querySelector('button[type="submit"]');
+    const displayName = registerFormEl.querySelector('[name="fullName"]')?.value.trim();
+    const email = registerFormEl.querySelector('[name="email"]')?.value.trim();
+    const password = registerFormEl.querySelector('[name="password"]')?.value ?? "";
+
+    submitButton.disabled = true;
+    try {
+      const authResponse = await sendAuthRequest("/api/auth/register", {
+        email,
+        password,
+        displayName,
+      });
+      saveSession(authResponse, true);
+      window.location.assign("/");
+    } catch (error) {
+      const message = error.status === 409
+        ? "Email này đã được đăng ký."
+        : error.status === 429
+          ? "Bạn thao tác quá nhiều lần. Vui lòng thử lại sau."
+          : error.message;
+      showMessage(registerForm, message);
+    } finally {
+      submitButton.disabled = false;
+    }
+  });
 });

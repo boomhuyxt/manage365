@@ -1,6 +1,8 @@
 using System.Text;
 using System.Threading.RateLimiting;
+using manage365.Repositories.Attendance;
 using manage365.Repositories.Auth;
+using manage365.Routes.API.Attendance;
 using manage365.Routes.API.Auth;
 using manage365.Routes.API.Health;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -18,7 +20,17 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "Manage365 API",
         Version = "v1",
-        Description = "Hệ thống quản lý Manage365 API"
+        Description = "Manage365 management system API"
+    });
+});
+
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowAll", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyMethod()
+              .AllowAnyHeader();
     });
 });
 
@@ -81,9 +93,20 @@ if (!string.IsNullOrWhiteSpace(databaseUsername))
 
 builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(databaseConnection.ConnectionString));
 
+builder.Services.AddOptions<AttendancePolicyOptions>()
+    .Bind(builder.Configuration.GetSection(AttendancePolicyOptions.SectionName))
+    .Validate(
+        options => Encoding.UTF8.GetByteCount(options.QrHmacSecret) >= 32,
+        "AttendancePolicy:QrHmacSecret must be at least 32 bytes.")
+    .Validate(options => options.QrValiditySeconds is > 0 and <= 300,
+        "AttendancePolicy:QrValiditySeconds must be between 1 and 300.")
+    .ValidateOnStart();
+
 builder.Services.AddScoped<IUserRepository, PostgresUserRepository>();
 builder.Services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
+builder.Services.AddSingleton<IQrSignatureService, HmacQrSignatureService>();
+builder.Services.AddScoped<IShiftAttendanceRepository, PostgresShiftAttendanceRepository>();
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -97,12 +120,20 @@ builder.Services.AddRateLimiter(options =>
             QueueLimit = 0,
             AutoReplenishment = true
         }));
+    options.AddPolicy("attendance-scan", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 30,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
 });
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-// Cho phép Swagger chạy trên cả Windows, Linux và Docker
 var enableSwagger = app.Environment.IsDevelopment() ||
                     app.Configuration.GetValue<bool>("EnableSwagger", true);
 
@@ -118,10 +149,10 @@ if (enableSwagger)
 else
 {
     app.UseExceptionHandler("/Home/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
+app.UseCors("AllowAll");
 app.UseHttpsRedirection();
 app.UseRouting();
 
@@ -137,6 +168,5 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
-
 
 app.Run();

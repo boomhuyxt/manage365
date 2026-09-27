@@ -1,18 +1,19 @@
 # QR Attendance API
 
 ## Goal
-Build a role-protected backend API for short-lived QR attendance sessions while leaving PostgreSQL/Supabase persistence behind replaceable repository interfaces.
+Use one QR attendance flow backed by Supabase PostgreSQL and protected with an HMAC signature.
 
-## Tasks
-- [x] Add `Admin`, `Manager`, and `Employee` roles to users and JWT claims → Verify: role authorization distinguishes manager and employee tokens.
-- [x] Add attendance session, record, QR-token, and repository contracts → Verify: only QR hashes are stored and duplicate check-ins are atomic.
-- [x] Add manager session endpoints and employee check-in/history endpoints → Verify: expected 201/200/403/404/409/422 responses.
-- [x] Add per-user check-in rate limiting and service registration → Verify: application starts and routes resolve.
-- [x] Document the PostgreSQL/Supabase schema contract for the database teammate → Verify: UUID session IDs, bigint employee foreign keys, TIMESTAMPTZ, constraints, and indexes are specified.
-- [x] Run build, formatting, and end-to-end HTTP checks → Verify: manager creates a session and an employee checks in once.
+## Active endpoints
+- `GET /api/attendance-qr/kiosk`: returns a short-lived signed QR payload.
+- `POST /api/attendance/verify-qr`: validates the HMAC signature, expiry, and employee shift eligibility.
+- `POST /api/attendance/submit`: records check-in or check-out in PostgreSQL.
+- `GET /api/attendance/history`: returns the authenticated employee's attendance history.
 
-## Done When
-- [x] The API enforces roles, QR expiry, one check-in per employee/session, token hashing, pagination, and a database-ready repository boundary.
+## Architecture
+- HTTP contracts and controllers live in `Routes/API/Attendance`.
+- PostgreSQL access lives in `Repositories/Attendance` through `IShiftAttendanceRepository`.
+- `HmacQrSignatureService` signs and verifies QR payloads.
+- `AttendancePolicyOptions` is loaded from configuration; its HMAC secret must come from `.env`.
 
-## Notes
-Supabase PostgreSQL is connected for authentication and health checks. QR attendance persistence remains in-memory until its database tables are implemented.
+## Removed legacy flow
+The in-memory session/token flow and its `/api/attendance-sessions`, `/api/attendance-check-ins`, and `/api/attendance-records` endpoints have been removed to avoid two overlapping QR systems.

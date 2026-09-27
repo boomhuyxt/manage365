@@ -1,42 +1,15 @@
 using Microsoft.AspNetCore.Mvc;
 
-namespace manage365.Controllers
+namespace manage365.Controllers;
+
+public sealed class AccountController : Controller
 {
-    public class AccountController : Controller
-    {
-        [HttpGet]
-        public IActionResult Login()
-        {
-            return View();
-        }
+    [HttpGet]
+    public IActionResult Login() => View();
 
-        [HttpPost]
-        public IActionResult Login(string username, string password)
-        {
-            // Cho phép đăng nhập và chuyển về trang chủ hoặc phân ca
-            if (!string.IsNullOrEmpty(username) && username.ToLower().Contains("admin"))
-            {
-                return RedirectToAction("Schedule", "Home");
-            }
-            return RedirectToAction("Index", "Home");
-        }
+    [HttpGet]
+    public IActionResult Register() => RedirectToAction(nameof(Login));
 
-        [HttpGet]
-        public IActionResult Register()
-        {
-            return RedirectToAction("Login");
-        }
-
-        [HttpPost]
-        public IActionResult Register(string fullName, string email, string phone, string password)
-        {
-            return RedirectToAction("Schedule", "Home");
-        }
-
-        [HttpGet]
-        public IActionResult Logout()
-        {
-            return RedirectToAction("Login");
-        }
-    }
+    [HttpGet]
+    public IActionResult Logout() => RedirectToAction(nameof(Login));
 }

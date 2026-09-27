@@ -3,6 +3,7 @@ using manage365.Repositories.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+
 namespace manage365.Routes.API.Auth;
 
 [ApiController]
@@ -72,7 +73,6 @@ public sealed class AuthController(
         var subject = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
         var email = User.FindFirst(JwtRegisteredClaimNames.Email)?.Value;
         var displayName = User.FindFirst(JwtRegisteredClaimNames.Name)?.Value;
-
         var role = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
 
         if (!long.TryParse(subject, out var userId) || email is null || displayName is null || role is null)
