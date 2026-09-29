@@ -15,6 +15,31 @@ LocalEnvFile.LoadIntoProcessEnvironment(Path.Combine(Directory.GetCurrentDirecto
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load .env file if present
+var envFilePath = Path.Combine(builder.Environment.ContentRootPath, ".env");
+if (File.Exists(envFilePath))
+{
+    foreach (var line in File.ReadAllLines(envFilePath))
+    {
+        var trimmed = line.Trim();
+        if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith('#'))
+        {
+            continue;
+        }
+
+        var parts = trimmed.Split('=', 2);
+        if (parts.Length == 2)
+        {
+            var key = parts[0].Trim().Replace("__", ":");
+            var val = parts[1].Trim().Trim('\'', '"');
+            if (string.IsNullOrWhiteSpace(builder.Configuration[key]))
+            {
+                builder.Configuration[key] = val;
+            }
+        }
+    }
+}
+
 // Add services to the container.
 builder.Services.AddControllersWithViews();
 builder.Services.AddEndpointsApiExplorer();
@@ -76,6 +101,8 @@ if (string.IsNullOrWhiteSpace(databaseConnectionString))
     throw new InvalidOperationException("ConnectionStrings:DefaultConnection is required.");
 }
 
+
+databaseConnectionString = databaseConnectionString.Trim().Trim('\'', '"');
 var databaseConnection = new NpgsqlConnectionStringBuilder(databaseConnectionString);
 var databaseHost = builder.Configuration["Database:Host"];
 var databaseUsername = builder.Configuration["Database:Username"];
