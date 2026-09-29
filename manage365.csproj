@@ -17,4 +17,11 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="manage365.Tests\**\*.cs" />
+    <Content Remove="manage365.Tests\**\*" />
+    <EmbeddedResource Remove="manage365.Tests\**\*" />
+    <None Remove="manage365.Tests\**\*" />
+  </ItemGroup>
+
 </Project>

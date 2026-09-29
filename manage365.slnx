@@ -1,3 +1,4 @@
 <Solution>
   <Project Path="manage365.csproj" />
+  <Project Path="manage365.Tests/manage365.Tests.csproj" />
 </Solution>

@@ -91,8 +91,7 @@
               </div>
               <h6 class="fw-bold text-dark mb-0">Chi Nhánh Bến Nghé, Quận 1</h6>
               <small class="text-muted extra-small"
-                ><i class="fa-solid fa-location-dot me-1"></i>Bán kính Geofence
-                20m</small
+                ><i class="fa-solid fa-location-dot me-1"></i>GPS + Geofence theo cấu hình cửa hàng</small
               >
             </div>
           </div>
@@ -146,7 +145,7 @@
                 </h6>
                 <span class="badge bg-light text-secondary border extra-small"
                   ><i class="fa-solid fa-shield-halved me-1 text-success"></i
-                  >Geofence 20m</span
+                  >GPS bắt buộc</span
                 >
               </div>
 
@@ -262,104 +261,69 @@
           >
             <!-- GIAO DIỆN ADMIN -->
             <div id="adminView" class="role-view d-none">
-              <div
-                class="d-flex justify-content-between align-items-center mb-3"
-              >
+              <div class="d-flex justify-content-between align-items-center mb-3">
                 <div>
-                  <small class="text-muted extra-small uppercase fw-bold"
-                    >CHỈ SỐ CHUYÊN CẦN</small
-                  >
-                  <h6 class="fw-bold text-dark mb-0">
-                    Điểm Danh Ca Chiều #104
-                  </h6>
+                  <small class="text-muted extra-small uppercase fw-bold">DỮ LIỆU CHẤM CÔNG HÔM NAY</small>
+                  <h6 class="fw-bold text-dark mb-0">Ghi nhận trực tiếp từ PostgreSQL</h6>
                 </div>
-                <span
-                  class="badge bg-warning-subtle text-warning-orange fs-6 px-3 py-2 rounded-3"
-                  >75%</span
-                >
+                <span id="attendanceSummaryBadge" class="badge bg-warning-subtle text-warning-orange fs-6 px-3 py-2 rounded-3">0 lượt</span>
+              </div>
+
+              <div class="p-3 mb-3 border rounded-3 bg-light" id="storeLocationPanel">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                  <div>
+                    <div class="fw-bold small text-dark">
+                      <i class="fa-solid fa-location-crosshairs me-1 text-warning-orange"></i>
+                      Vị trí chấm công STORE-01
+                    </div>
+                    <div id="storeLocationStatus" class="text-muted extra-small mt-1">
+                      Đang kiểm tra cấu hình vị trí...
+                    </div>
+                  </div>
+                  <div class="d-flex align-items-center gap-2">
+                    <label for="storeRadiusMeters" class="extra-small text-muted">Bán kính</label>
+                    <div class="input-group input-group-sm" style="width: 105px">
+                      <input id="storeRadiusMeters" class="form-control" type="number" min="20" max="500" value="50" />
+                      <span class="input-group-text">m</span>
+                    </div>
+                    <button id="btnSetStoreLocation" type="button" class="btn btn-sm btn-warning-orange text-white fw-bold">
+                      <i class="fa-solid fa-crosshairs me-1"></i>Đặt vị trí cửa hàng tại đây
+                    </button>
+                  </div>
+                </div>
               </div>
 
               <div class="row g-2 mb-4">
                 <div class="col-4">
                   <div class="p-3 bg-light rounded-3 border">
-                    <div class="fs-4 fw-bold text-dark">06</div>
-                    <small class="text-muted extra-small">Số Ca Đặt</small>
+                    <div id="attendanceTotalToday" class="fs-4 fw-bold text-dark">0</div>
+                    <small class="text-muted extra-small">Lượt hôm nay</small>
                   </div>
                 </div>
                 <div class="col-4">
                   <div class="p-3 bg-light rounded-3 border">
-                    <div class="fs-4 fw-bold text-warning-orange">02</div>
-                    <small class="text-muted extra-small">Chưa Vào Ca</small>
+                    <div id="attendanceCheckedIn" class="fs-4 fw-bold text-warning-orange">0</div>
+                    <small class="text-muted extra-small">Đang làm</small>
                   </div>
                 </div>
                 <div class="col-4">
                   <div class="p-3 bg-light rounded-3 border">
-                    <div class="fs-4 fw-bold text-success">08</div>
-                    <small class="text-muted extra-small">Đúng Giờ</small>
+                    <div id="attendanceCompleted" class="fs-4 fw-bold text-success">0</div>
+                    <small class="text-muted extra-small">Đã hoàn tất</small>
                   </div>
                 </div>
               </div>
 
               <h6 class="fw-bold text-dark mb-3 extra-small uppercase">
-                <i class="fa-solid fa-list-check me-2 text-warning-orange"></i
-                >Dòng Ghi Nhận Trực Tiếp (Toàn Cửa Hàng)
+                <i class="fa-solid fa-list-check me-2 text-warning-orange"></i>
+                Dòng ghi nhận trực tiếp
               </h6>
-              <div class="d-flex flex-column gap-2 mb-3">
-                <div
-                  class="p-2 border rounded-3 d-flex align-items-center justify-content-between bg-light-cream"
-                >
-                  <div class="d-flex align-items-center gap-2">
-                    <div
-                      class="avatar-sm bg-secondary text-white rounded-circle d-flex align-items-center justify-content-center extra-small fw-bold"
-                      style="width: 32px; height: 32px"
-                    >
-                      TM
-                    </div>
-                    <div>
-                      <div class="fw-bold extra-small text-dark">
-                        Nguyễn Thảo My
-                      </div>
-                      <small class="text-muted extra-small"
-                        >Quầy Thu Ngân 01</small
-                      >
-                    </div>
-                  </div>
-                  <div class="text-end">
-                    <span
-                      class="badge bg-success-subtle text-success extra-small"
-                      >14:01:20 • Check-in</span
-                    >
-                  </div>
-                </div>
-                <div
-                  class="p-2 border rounded-3 d-flex align-items-center justify-content-between bg-light-cream"
-                >
-                  <div class="d-flex align-items-center gap-2">
-                    <div
-                      class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center extra-small fw-bold"
-                      style="width: 32px; height: 32px"
-                    >
-                      TA
-                    </div>
-                    <div>
-                      <div class="fw-bold extra-small text-dark">
-                        Trần Tuấn Anh
-                      </div>
-                      <small class="text-muted extra-small"
-                        >Quản Lý Ca Bến Nghé</small
-                      >
-                    </div>
-                  </div>
-                  <div class="text-end">
-                    <span
-                      class="badge bg-success-subtle text-success extra-small"
-                      >13:55:10 • Check-in</span
-                    >
-                  </div>
+              <div id="adminLiveAttendanceList" class="d-flex flex-column gap-2 mb-3">
+                <div class="p-3 text-center text-muted small border rounded-3 bg-light">
+                  Đang tải dữ liệu chấm công...
                 </div>
               </div>
             </div>
-
             <!-- GIAO DIỆN EMPLOYEE -->
             <div id="employeeView" class="role-view d-none">
               <div

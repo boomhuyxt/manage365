@@ -192,6 +192,7 @@
                     </label>
                     <a
                       href="#"
+                      id="forgotPasswordLink"
                       class="text-decoration-none extra-small text-muted fw-semibold"
                       >Quên mật khẩu?</a
                     >
@@ -419,6 +420,102 @@
               <strong>1900 6828</strong>
             </div>
             <div>Phiên bản Kiosk v4.8.2</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="modal fade"
+      id="forgotPasswordModal"
+      tabindex="-1"
+      aria-labelledby="forgotPasswordTitle"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+          <div class="modal-header border-0 pb-0">
+            <div>
+              <h2 id="forgotPasswordTitle" class="modal-title h5 fw-bold">Đặt lại mật khẩu</h2>
+              <p id="forgotPasswordSubtitle" class="small text-muted mb-0">
+                Nhập email đã đăng ký để nhận mã xác nhận.
+              </p>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+          </div>
+          <div class="modal-body pt-4">
+            <div id="forgotPasswordMessage" class="d-none" role="alert"></div>
+
+            <form id="forgotEmailForm" novalidate>
+              <label for="forgotEmail" class="form-label small fw-bold">Email tài khoản</label>
+              <input
+                id="forgotEmail"
+                type="email"
+                class="form-control"
+                autocomplete="email"
+                maxlength="254"
+                required
+              />
+              <button type="submit" class="btn btn-orange w-100 mt-4 py-2 fw-bold">
+                Gửi mã xác nhận
+              </button>
+            </form>
+
+            <form id="verifyCodeForm" class="d-none" novalidate>
+              <label for="resetCode" class="form-label small fw-bold">Mã xác nhận 6 số</label>
+              <input
+                id="resetCode"
+                type="text"
+                class="form-control text-center fs-4 fw-bold"
+                inputmode="numeric"
+                autocomplete="one-time-code"
+                minlength="6"
+                maxlength="6"
+                pattern="[0-9]{6}"
+                required
+              />
+              <button type="submit" class="btn btn-orange w-100 mt-4 py-2 fw-bold">
+                Xác nhận mã
+              </button>
+              <button id="resendCodeButton" type="button" class="btn btn-link w-100 mt-2 text-muted" disabled>
+                Gửi lại mã sau 60 giây
+              </button>
+            </form>
+
+            <form id="newPasswordForm" class="d-none" novalidate>
+              <label for="newPassword" class="form-label small fw-bold">Mật khẩu mới</label>
+              <input
+                id="newPassword"
+                type="password"
+                class="form-control"
+                autocomplete="new-password"
+                minlength="8"
+                maxlength="128"
+                required
+              />
+              <label for="confirmNewPassword" class="form-label small fw-bold mt-3">Xác nhận mật khẩu</label>
+              <input
+                id="confirmNewPassword"
+                type="password"
+                class="form-control"
+                autocomplete="new-password"
+                minlength="8"
+                maxlength="128"
+                required
+              />
+              <button type="submit" class="btn btn-orange w-100 mt-4 py-2 fw-bold">
+                Cập nhật mật khẩu
+              </button>
+            </form>
+
+            <div id="resetPasswordSuccess" class="d-none text-center py-3">
+              <i class="fa-solid fa-circle-check text-success fs-1 mb-3" aria-hidden="true"></i>
+              <h3 class="h6 fw-bold">Mật khẩu đã được cập nhật</h3>
+              <p class="small text-muted">Bạn có thể đăng nhập bằng mật khẩu mới.</p>
+              <button type="button" class="btn btn-orange w-100 py-2 fw-bold" data-bs-dismiss="modal">
+                Quay lại đăng nhập
+              </button>
+            </div>
           </div>
         </div>
       </div>
