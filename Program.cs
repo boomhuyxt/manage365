@@ -1,13 +1,17 @@
 using System.Text;
 using System.Threading.RateLimiting;
+using manage365.Configuration;
 using manage365.Repositories.Attendance;
 using manage365.Repositories.Auth;
 using manage365.Routes.API.Attendance;
 using manage365.Routes.API.Auth;
+using manage365.Routes.API.Auth.PasswordReset;
 using manage365.Routes.API.Health;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
+
+LocalEnvFile.LoadIntoProcessEnvironment(Path.Combine(Directory.GetCurrentDirectory(), ".env"));
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -100,12 +104,46 @@ builder.Services.AddOptions<AttendancePolicyOptions>()
         "AttendancePolicy:QrHmacSecret must be at least 32 bytes.")
     .Validate(options => options.QrValiditySeconds is > 0 and <= 300,
         "AttendancePolicy:QrValiditySeconds must be between 1 and 300.")
+    .Validate(options => options.MaxLocationAccuracyMeters is > 0 and <= 1000,
+        "AttendancePolicy:MaxLocationAccuracyMeters must be between 1 and 1000.")
+    .Validate(options => options.MaxLocationAgeSeconds is > 0 and <= 600,
+        "AttendancePolicy:MaxLocationAgeSeconds must be between 1 and 600.")
     .ValidateOnStart();
 
 builder.Services.AddScoped<IUserRepository, PostgresUserRepository>();
 builder.Services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
+builder.Services.AddOptions<PasswordResetOptions>()
+    .Bind(builder.Configuration.GetSection(PasswordResetOptions.SectionName))
+    .Validate(options => options.CodeLifetimeMinutes is > 0 and <= 30,
+        "PasswordReset:CodeLifetimeMinutes must be between 1 and 30.")
+    .Validate(options => options.ResetTokenLifetimeMinutes is > 0 and <= 30,
+        "PasswordReset:ResetTokenLifetimeMinutes must be between 1 and 30.")
+    .Validate(options => options.MaxAttempts is > 0 and <= 10,
+        "PasswordReset:MaxAttempts must be between 1 and 10.");
+builder.Services.AddOptions<SmtpOptions>()
+    .Bind(builder.Configuration.GetSection(SmtpOptions.SectionName))
+    .Validate(options => !string.IsNullOrWhiteSpace(options.Host), "Smtp:Host is required.")
+    .Validate(options => options.Port is > 0 and <= 65535, "Smtp:Port must be valid.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.Username), "Smtp:Username is required.")
+    .Validate(options => !string.IsNullOrWhiteSpace(options.Password), "Smtp:Password is required.")
+    .Validate(options =>
+            !options.Host.Equals("smtp.gmail.com", StringComparison.OrdinalIgnoreCase) ||
+            SmtpCredential.NormalizePassword(options.Host, options.Password).Length == 16,
+        "A Gmail App Password must contain exactly 16 characters (spaces are ignored).")
+    .ValidateOnStart();
+builder.Services.AddSingleton<IPasswordResetTokenProtector>(services =>
+{
+    var options = services.GetRequiredService<Microsoft.Extensions.Options.IOptions<PasswordResetOptions>>().Value;
+    var hashKey = Encoding.UTF8.GetByteCount(options.HashKey) >= 32 ? options.HashKey : jwt.Key;
+    return new PasswordResetTokenProtector(hashKey);
+});
+builder.Services.AddSingleton<IPasswordResetEmailSender, SmtpPasswordResetEmailSender>();
+builder.Services.AddScoped<IPasswordResetService, PasswordResetService>();
+builder.Services.AddScoped<IPasswordResetRepository, PostgresPasswordResetRepository>();
 builder.Services.AddSingleton<IQrSignatureService, HmacQrSignatureService>();
+builder.Services.AddScoped<IAttendanceLocationRepository, PostgresAttendanceLocationRepository>();
+builder.Services.AddScoped<IAttendanceGeofenceService, AttendanceGeofenceService>();
 builder.Services.AddScoped<IShiftAttendanceRepository, PostgresShiftAttendanceRepository>();
 
 builder.Services.AddRateLimiter(options =>
@@ -117,6 +155,15 @@ builder.Services.AddRateLimiter(options =>
         {
             PermitLimit = 10,
             Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+    options.AddPolicy("password-reset", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(5),
             QueueLimit = 0,
             AutoReplenishment = true
         }));
