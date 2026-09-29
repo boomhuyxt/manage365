@@ -11,31 +11,20 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Npgsql;
 
-LocalEnvFile.LoadIntoProcessEnvironment(Path.Combine(Directory.GetCurrentDirectory(), ".env"));
+LocalEnvFile.LoadIntoProcessEnvironment();
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Load .env file if present
-var envFilePath = Path.Combine(builder.Environment.ContentRootPath, ".env");
-if (File.Exists(envFilePath))
+// Load .env file into configuration if present
+var envFilePath = LocalEnvFile.ResolveEnvFilePath(Path.Combine(builder.Environment.ContentRootPath, ".env"));
+if (envFilePath != null)
 {
-    foreach (var line in File.ReadAllLines(envFilePath))
+    foreach (var (rawKey, val) in LocalEnvFile.Parse(File.ReadAllLines(envFilePath)))
     {
-        var trimmed = line.Trim();
-        if (string.IsNullOrWhiteSpace(trimmed) || trimmed.StartsWith('#'))
+        var key = rawKey.Replace("__", ":");
+        if (string.IsNullOrWhiteSpace(builder.Configuration[key]))
         {
-            continue;
-        }
-
-        var parts = trimmed.Split('=', 2);
-        if (parts.Length == 2)
-        {
-            var key = parts[0].Trim().Replace("__", ":");
-            var val = parts[1].Trim().Trim('\'', '"');
-            if (string.IsNullOrWhiteSpace(builder.Configuration[key]))
-            {
-                builder.Configuration[key] = val;
-            }
+            builder.Configuration[key] = val;
         }
     }
 }
