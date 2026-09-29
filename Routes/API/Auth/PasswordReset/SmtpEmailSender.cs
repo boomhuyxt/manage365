@@ -14,14 +14,21 @@ public interface IPasswordResetEmailSender
 
 public static class SmtpCredential
 {
-    public static string NormalizePassword(string host, string password)
+    public static string NormalizePassword(string host, string? password)
     {
-        if (!host.Equals("smtp.gmail.com", StringComparison.OrdinalIgnoreCase))
+        if (string.IsNullOrWhiteSpace(password))
         {
-            return password;
+            return string.Empty;
         }
 
-        return string.Concat(password.Where(character => !char.IsWhiteSpace(character)));
+        var trimmed = password.Trim().Trim('\'', '"').Trim();
+
+        if (!host.Equals("smtp.gmail.com", StringComparison.OrdinalIgnoreCase))
+        {
+            return trimmed;
+        }
+
+        return string.Concat(trimmed.Where(character => !char.IsWhiteSpace(character)));
     }
 }
 

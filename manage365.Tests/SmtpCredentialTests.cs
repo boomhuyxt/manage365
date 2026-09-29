@@ -15,6 +15,15 @@ public sealed class SmtpCredentialTests
         Assert.Equal("abcdefghijklmnop", password);
     }
 
+    [Theory]
+    [InlineData("'abcd efgh ijkl mnop'")]
+    [InlineData("\"abcd efgh ijkl mnop\"")]
+    public void NormalizePassword_TrimsQuotesForGmail(string input)
+    {
+        var password = SmtpCredential.NormalizePassword("smtp.gmail.com", input);
+        Assert.Equal("abcdefghijklmnop", password);
+    }
+
     [Fact]
     public void NormalizePassword_PreservesWhitespaceForOtherProviders()
     {
