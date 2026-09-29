@@ -2,14 +2,55 @@ namespace manage365.Configuration;
 
 public static class LocalEnvFile
 {
-    public static void LoadIntoProcessEnvironment(string path)
+    public static string? ResolveEnvFilePath(params string?[] candidatePaths)
     {
-        if (!File.Exists(path))
+        foreach (var path in candidatePaths)
+        {
+            if (!string.IsNullOrWhiteSpace(path) && File.Exists(path))
+            {
+                return Path.GetFullPath(path);
+            }
+        }
+
+        var searchDirs = new[]
+        {
+            Directory.GetCurrentDirectory(),
+            AppContext.BaseDirectory
+        };
+
+        foreach (var baseDir in searchDirs)
+        {
+            try
+            {
+                var dir = new DirectoryInfo(baseDir);
+                while (dir != null)
+                {
+                    var candidate = Path.Combine(dir.FullName, ".env");
+                    if (File.Exists(candidate))
+                    {
+                        return candidate;
+                    }
+                    dir = dir.Parent;
+                }
+            }
+            catch
+            {
+                // Ignore invalid path issues during directory traversal
+            }
+        }
+
+        return null;
+    }
+
+    public static void LoadIntoProcessEnvironment(string? path = null)
+    {
+        var resolvedPath = ResolveEnvFilePath(path);
+        if (resolvedPath == null)
         {
             return;
         }
 
-        foreach (var (key, value) in Parse(File.ReadLines(path)))
+        foreach (var (key, value) in Parse(File.ReadLines(resolvedPath)))
         {
             if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable(key)))
             {
