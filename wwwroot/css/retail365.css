@@ -381,3 +381,17 @@ body.bg-light-cream {
   z-index: 1090;
   min-width: 320px;
 }
+
+#addressSearchResults {
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.address-result-item {
+  border-left: 3px solid transparent;
+}
+
+.address-result-item:hover,
+.address-result-item.active {
+  border-left-color: var(--color-orange);
+}

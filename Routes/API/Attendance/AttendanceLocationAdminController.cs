@@ -1,8 +1,10 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using manage365.Repositories.Attendance;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace manage365.Routes.API.Attendance;
 
@@ -10,8 +12,48 @@ namespace manage365.Routes.API.Attendance;
 [Authorize]
 [Route("api/attendance-locations")]
 public sealed partial class AttendanceLocationAdminController(
-    IAttendanceLocationRepository locationRepository) : ControllerBase
+    IAttendanceLocationRepository locationRepository,
+    IAddressGeocodingService geocodingService) : ControllerBase
 {
+    [HttpGet("address-search")]
+    [EnableRateLimiting("address-search")]
+    [ProducesResponseType<List<AddressSearchResultDto>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status502BadGateway)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status504GatewayTimeout)]
+    public async Task<ActionResult<List<AddressSearchResultDto>>> SearchAddress(
+        [FromQuery] string address,
+        CancellationToken cancellationToken)
+    {
+        var normalizedAddress = address?.Trim();
+        if (string.IsNullOrWhiteSpace(normalizedAddress) || normalizedAddress.Length is < 5 or > 300)
+        {
+            return ValidationProblem(
+                "Địa chỉ cửa hàng phải có từ 5 đến 300 ký tự.",
+                "address_invalid");
+        }
+
+        try
+        {
+            var results = await geocodingService.SearchAsync(normalizedAddress, cancellationToken);
+            return Ok(results);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or JsonException)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status502BadGateway,
+                title: "Dịch vụ tìm địa chỉ đang tạm thời không khả dụng. Vui lòng thử lại sau.",
+                extensions: new Dictionary<string, object?> { ["code"] = "geocoding_unavailable" });
+        }
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status504GatewayTimeout,
+                title: "Tìm địa chỉ quá thời gian chờ. Vui lòng thử lại.",
+                extensions: new Dictionary<string, object?> { ["code"] = "geocoding_timeout" });
+        }
+    }
+
     [HttpGet("{storeCode}")]
     [ProducesResponseType<StoreGeofenceDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

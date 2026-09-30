@@ -108,6 +108,12 @@ public sealed record UpdateStoreGeofenceRequest(
     double AccuracyMeters,
     double AllowedRadiusMeters);
 
+public sealed record AddressSearchResultDto(
+    string DisplayName,
+    double Latitude,
+    double Longitude,
+    string MapUrl);
+
 public sealed record AdminAttendanceSnapshotDto(
     DateTimeOffset ServerTimeUtc,
     int TotalToday,
