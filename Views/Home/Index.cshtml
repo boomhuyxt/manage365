@@ -289,6 +289,15 @@
                     <button id="btnSetStoreLocation" type="button" class="btn btn-sm btn-warning-orange text-white fw-bold">
                       <i class="fa-solid fa-crosshairs me-1"></i>Đặt vị trí cửa hàng tại đây
                     </button>
+                    <button
+                      id="btnOpenAddressLocation"
+                      type="button"
+                      class="btn btn-sm btn-outline-primary fw-bold"
+                      data-bs-toggle="modal"
+                      data-bs-target="#addressLocationModal"
+                    >
+                      <i class="fa-solid fa-map-location-dot me-1"></i>Nhập địa chỉ cửa hàng
+                    </button>
                   </div>
                 </div>
               </div>
@@ -364,6 +373,78 @@
               <span>Đang kết nối POS Kiosk #01</span>
               <span>Hotline hỗ trợ: <strong>1900 6828</strong></span>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="modal fade"
+      id="addressLocationModal"
+      tabindex="-1"
+      aria-labelledby="addressLocationModalLabel"
+      aria-hidden="true"
+    >
+      <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow">
+          <div class="modal-header">
+            <div>
+              <h5 class="modal-title fw-bold" id="addressLocationModalLabel">
+                <i class="fa-solid fa-map-location-dot me-2 text-primary"></i>Đặt vị trí bằng địa chỉ
+              </h5>
+              <div class="text-muted extra-small mt-1">
+                Tìm bằng địa chỉ hoặc dán liên kết Google Maps để lấy đúng tọa độ cửa hàng.
+              </div>
+            </div>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+          </div>
+          <div class="modal-body">
+            <label for="storeAddressInput" class="form-label small fw-semibold">Địa chỉ, tọa độ hoặc liên kết Google Maps</label>
+            <div class="input-group">
+              <input
+                id="storeAddressInput"
+                type="text"
+                class="form-control"
+                maxlength="2048"
+                autocomplete="street-address"
+                placeholder="Nhập địa chỉ hoặc dán link https://google.com/maps/.../@@10.84,106.79,17z"
+              />
+              <button id="btnSearchStoreAddress" type="button" class="btn btn-primary fw-semibold">
+                <i class="fa-solid fa-magnifying-glass me-1"></i>Tìm địa chỉ
+              </button>
+            </div>
+            <div id="addressSearchFeedback" class="form-text">
+              Nếu không tìm thấy số nhà, hãy mở điểm trên Google Maps và sao chép liên kết đầy đủ trên thanh địa chỉ.
+            </div>
+
+            <div id="addressSearchResults" class="list-group mt-3"></div>
+
+            <div id="selectedAddressPreview" class="d-none mt-3 p-3 rounded-3 border bg-light">
+              <div class="fw-semibold text-success mb-1">
+                <i class="fa-solid fa-circle-check me-1"></i>Địa chỉ đã chọn
+              </div>
+              <div id="selectedAddressName" class="small text-dark"></div>
+              <div id="selectedAddressCoordinates" class="extra-small text-muted mt-1"></div>
+              <a
+                id="selectedAddressMapLink"
+                class="extra-small"
+                href="#"
+                target="_blank"
+                rel="noopener noreferrer"
+              >Xem vị trí trên OpenStreetMap</a>
+            </div>
+
+            <div class="extra-small text-muted mt-3">
+              Dữ liệu địa chỉ © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>.
+              Với link Google Maps hoặc tọa độ, dữ liệu được đọc trực tiếp từ nội dung bạn nhập.
+              Hãy kiểm tra điểm trên bản đồ trước khi lưu để bảo đảm vị trí chấm công chính xác.
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Hủy</button>
+            <button id="btnSaveAddressLocation" type="button" class="btn btn-warning-orange text-white fw-bold" disabled>
+              <i class="fa-solid fa-floppy-disk me-1"></i>Lưu vị trí cửa hàng
+            </button>
           </div>
         </div>
       </div>
