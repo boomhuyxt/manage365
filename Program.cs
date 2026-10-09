@@ -7,8 +7,13 @@ using manage365.Routes.API.Attendance;
 using manage365.Routes.API.Auth;
 using manage365.Routes.API.Auth.PasswordReset;
 using manage365.Routes.API.Health;
+using manage365.Repositories.Departments;
+using manage365.Repositories.Permissions;
+using manage365.Repositories.Roles;
+using manage365.Repositories.Users;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using Npgsql;
 
 LocalEnvFile.LoadIntoProcessEnvironment();
@@ -44,12 +49,36 @@ builder.Services.AddHttpClient<IAddressGeocodingService, NominatimGeocodingServi
 });
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new Microsoft.OpenApi.OpenApiInfo
+    c.SwaggerDoc("v1", new OpenApiInfo
     {
         Title = "Manage365 API",
         Version = "v1",
-        Description = "Manage365 management system API"
+        Description = "Manage365 management system API - Chấm công, Người dùng & Phân quyền"
     });
+
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
+    {
+        Description = "Nhập JWT Bearer token theo định dạng: Bearer {token}",
+        Name = "Authorization",
+        In = ParameterLocation.Header,
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+
+    c.AddSecurityRequirement(_ => new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecuritySchemeReference("Bearer"),
+            new List<string>()
+        }
+    });
+
+    var xmlFilename = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
+    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFilename);
+    if (File.Exists(xmlPath))
+    {
+        c.IncludeXmlComments(xmlPath);
+    }
 });
 
 builder.Services.AddCors(options =>
@@ -68,7 +97,8 @@ builder.Services.AddOptions<JwtOptions>()
     .Validate(options => !string.IsNullOrWhiteSpace(options.Issuer), "Jwt:Issuer is required.")
     .Validate(options => !string.IsNullOrWhiteSpace(options.Audience), "Jwt:Audience is required.")
     .Validate(options => Encoding.UTF8.GetByteCount(options.Key) >= 32, "Jwt:Key must be at least 32 bytes.")
-    .Validate(options => options.AccessTokenMinutes is > 0 and <= 60, "Jwt:AccessTokenMinutes must be between 1 and 60.")
+    .Validate(options => options.AccessTokenMinutes is > 0 and <= 1440, "Jwt:AccessTokenMinutes must be between 1 and 1440.")
+    .Validate(options => options.RefreshTokenLifetimeDays is >= 1 and <= 365, "Jwt:RefreshTokenLifetimeDays must be between 1 and 365.")
     .ValidateOnStart();
 
 var jwt = jwtSection.Get<JwtOptions>()
@@ -137,6 +167,11 @@ builder.Services.AddOptions<AttendancePolicyOptions>()
     .ValidateOnStart();
 
 builder.Services.AddScoped<IUserRepository, PostgresUserRepository>();
+builder.Services.AddScoped<IUserManagementRepository, PostgresUserManagementRepository>();
+builder.Services.AddScoped<IRoleRepository, PostgresRoleRepository>();
+builder.Services.AddScoped<IPermissionRepository, PostgresPermissionRepository>();
+builder.Services.AddScoped<IDepartmentRepository, PostgresDepartmentRepository>();
+builder.Services.AddScoped<IRefreshTokenRepository, PostgresRefreshTokenRepository>();
 builder.Services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 builder.Services.AddOptions<PasswordResetOptions>()
@@ -250,5 +285,19 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
+
+try
+{
+    using var startupScope = app.Services.CreateScope();
+    var permissionRepo = startupScope.ServiceProvider.GetRequiredService<IPermissionRepository>();
+    await permissionRepo.EnsureTablesAndSeedAsync();
+
+    var deptRepo = startupScope.ServiceProvider.GetRequiredService<IDepartmentRepository>();
+    await deptRepo.EnsureTablesAndSeedAsync();
+}
+catch (Exception ex)
+{
+    app.Logger.LogWarning(ex, "Failed to initialize permissions or departments tables on startup.");
+}
 
 app.Run();

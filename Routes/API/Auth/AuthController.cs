@@ -3,6 +3,7 @@ using manage365.Repositories.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using Microsoft.Extensions.Options;
 
 namespace manage365.Routes.API.Auth;
 
@@ -11,7 +12,9 @@ namespace manage365.Routes.API.Auth;
 public sealed class AuthController(
     IUserRepository userRepository,
     IPasswordHasher passwordHasher,
-    IJwtTokenService tokenService) : ControllerBase
+    IJwtTokenService tokenService,
+    IRefreshTokenRepository refreshTokenRepository,
+    IOptions<JwtOptions> jwtOptions) : ControllerBase
 {
     [HttpPost("register")]
     [EnableRateLimiting("auth")]
@@ -37,7 +40,7 @@ public sealed class AuthController(
             });
         }
 
-        var response = CreateAuthResponse(user);
+        var response = await CreateAuthResponseAsync(user, cancellationToken);
         return CreatedAtAction(nameof(Me), response);
     }
 
@@ -61,7 +64,77 @@ public sealed class AuthController(
             });
         }
 
-        return Ok(CreateAuthResponse(user));
+        var response = await CreateAuthResponseAsync(user, cancellationToken);
+        return Ok(response);
+    }
+
+    [HttpPost("refresh")]
+    [EnableRateLimiting("auth")]
+    [ProducesResponseType<AuthResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status401Unauthorized)]
+    public async Task<ActionResult<AuthResponse>> Refresh(
+        RefreshTokenRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            return Unauthorized(new ProblemDetails
+            {
+                Status = StatusCodes.Status401Unauthorized,
+                Title = "Refresh token is required."
+            });
+        }
+
+        var tokenHash = tokenService.HashRefreshToken(request.RefreshToken);
+        var slidingDays = Math.Max(1, jwtOptions.Value.RefreshTokenLifetimeDays);
+        var newExpiresAt = DateTimeOffset.UtcNow.AddDays(slidingDays);
+
+        var updatedToken = await refreshTokenRepository.SlideExpirationAsync(tokenHash, newExpiresAt, cancellationToken);
+        if (updatedToken is null)
+        {
+            return Unauthorized(new ProblemDetails
+            {
+                Status = StatusCodes.Status401Unauthorized,
+                Title = "Invalid or expired refresh token."
+            });
+        }
+
+        var user = await userRepository.FindByIdAsync(updatedToken.UserId, cancellationToken);
+        if (user is null)
+        {
+            return Unauthorized(new ProblemDetails
+            {
+                Status = StatusCodes.Status401Unauthorized,
+                Title = "User not found."
+            });
+        }
+
+        var accessToken = tokenService.CreateAccessToken(user);
+        var response = new AuthResponse(
+            accessToken.Value,
+            request.RefreshToken.Trim(),
+            "Bearer",
+            accessToken.ExpiresAtUtc,
+            updatedToken.ExpiresAtUtc,
+            new UserResponse(user.Id, user.Email, user.DisplayName, user.Role));
+
+        return Ok(response);
+    }
+
+    [HttpPost("revoke")]
+    [HttpPost("logout")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<IActionResult> Revoke(
+        RevokeTokenRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            var tokenHash = tokenService.HashRefreshToken(request.RefreshToken);
+            await refreshTokenRepository.RevokeTokenAsync(tokenHash, cancellationToken);
+        }
+
+        return Ok(new { message = "Logged out successfully." });
     }
 
     [Authorize]
@@ -83,13 +156,30 @@ public sealed class AuthController(
         return Ok(new UserResponse(userId, email, displayName, role));
     }
 
-    private AuthResponse CreateAuthResponse(User user)
+    private async Task<AuthResponse> CreateAuthResponseAsync(
+        User user,
+        CancellationToken cancellationToken)
     {
-        var token = tokenService.CreateAccessToken(user);
+        var accessToken = tokenService.CreateAccessToken(user);
+        var rawRefreshToken = tokenService.GenerateRefreshToken();
+        var tokenHash = tokenService.HashRefreshToken(rawRefreshToken);
+        var slidingDays = Math.Max(1, jwtOptions.Value.RefreshTokenLifetimeDays);
+        var refreshExpiresAt = DateTimeOffset.UtcNow.AddDays(slidingDays);
+        var deviceInfo = Request.Headers.UserAgent.ToString();
+
+        await refreshTokenRepository.SaveRefreshTokenAsync(
+            user.Id,
+            tokenHash,
+            refreshExpiresAt,
+            string.IsNullOrWhiteSpace(deviceInfo) ? null : deviceInfo,
+            cancellationToken);
+
         return new AuthResponse(
-            token.Value,
+            accessToken.Value,
+            rawRefreshToken,
             "Bearer",
-            token.ExpiresAtUtc,
+            accessToken.ExpiresAtUtc,
+            refreshExpiresAt,
             new UserResponse(user.Id, user.Email, user.DisplayName, user.Role));
     }
 

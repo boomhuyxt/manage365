@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
@@ -9,6 +10,8 @@ namespace manage365.Routes.API.Auth;
 public interface IJwtTokenService
 {
     IssuedToken CreateAccessToken(User user);
+    string GenerateRefreshToken();
+    string HashRefreshToken(string rawToken);
 }
 
 public sealed record IssuedToken(string Value, DateTimeOffset ExpiresAtUtc);
@@ -41,5 +44,20 @@ public sealed class JwtTokenService(IOptions<JwtOptions> options) : IJwtTokenSer
             signingCredentials: credentials);
 
         return new IssuedToken(new JwtSecurityTokenHandler().WriteToken(token), expiresAt);
+    }
+
+    public string GenerateRefreshToken()
+    {
+        var randomBytes = RandomNumberGenerator.GetBytes(64);
+        return Convert.ToBase64String(randomBytes)
+            .Replace("+", "-")
+            .Replace("/", "_")
+            .TrimEnd('=');
+    }
+
+    public string HashRefreshToken(string rawToken)
+    {
+        var bytes = SHA256.HashData(Encoding.UTF8.GetBytes(rawToken.Trim()));
+        return Convert.ToHexString(bytes).ToLowerInvariant();
     }
 }

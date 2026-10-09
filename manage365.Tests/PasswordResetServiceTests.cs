@@ -81,6 +81,9 @@ public sealed class PasswordResetServiceTests
         public Task<User?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default) =>
             Task.FromResult(user?.Email == normalizedEmail ? user : null);
 
+        public Task<User?> FindByIdAsync(long id, CancellationToken cancellationToken = default) =>
+            Task.FromResult(user?.Id == id ? user : null);
+
         public Task<User?> TryAddAsync(NewUser newUser, CancellationToken cancellationToken = default) =>
             Task.FromResult<User?>(null);
     }

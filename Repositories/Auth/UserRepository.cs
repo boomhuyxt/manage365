@@ -6,6 +6,7 @@ namespace manage365.Repositories.Auth;
 public interface IUserRepository
 {
     Task<User?> FindByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default);
+    Task<User?> FindByIdAsync(long id, CancellationToken cancellationToken = default);
     Task<User?> TryAddAsync(NewUser user, CancellationToken cancellationToken = default);
 }
 
@@ -34,6 +35,26 @@ public sealed class PostgresUserRepository(NpgsqlDataSource dataSource) : IUserR
 
         await using var command = dataSource.CreateCommand(sql);
         command.Parameters.AddWithValue("email", normalizedEmail);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        return await reader.ReadAsync(cancellationToken) ? ReadUser(reader) : null;
+    }
+
+    public async Task<User?> FindByIdAsync(
+        long id,
+        CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            SELECT nv.id, nv.email, nv.ho_ten, nv.mat_khau,
+                   COALESCE(vt.ten_vai_tro, 'Employee'), nv.created_at
+            FROM public.nhan_vien AS nv
+            LEFT JOIN public.vai_tro AS vt ON vt.id = nv.id_vai_tro
+            WHERE nv.id = @id
+            LIMIT 1;
+            """;
+
+        await using var command = dataSource.CreateCommand(sql);
+        command.Parameters.AddWithValue("id", id);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
 
         return await reader.ReadAsync(cancellationToken) ? ReadUser(reader) : null;
