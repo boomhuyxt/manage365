@@ -432,6 +432,14 @@ public sealed class PostgresShiftAttendanceRepository(
         DateTimeOffset nowUtc,
         CancellationToken cancellationToken)
     {
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        // Share the scheduling lock so check-in cannot race with cancellation or time edits.
+        await using (var employeeLock = new NpgsqlCommand("SELECT id FROM public.nhan_vien WHERE id = @id FOR UPDATE", connection))
+        {
+            employeeLock.Parameters.AddWithValue("id", employeeId);
+            await employeeLock.ExecuteScalarAsync(cancellationToken);
+        }
         action = action.Trim().ToUpperInvariant();
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(nowUtc, GetStoreTimeZone()).DateTime);
 
@@ -442,13 +450,14 @@ public sealed class PostgresShiftAttendanceRepository(
             LEFT JOIN public.cham_cong AS cc ON cc.id_dang_ky_ca = dkc.id
             WHERE dkc.id = @assignmentId
               AND dkc.id_nhan_vien = @employeeId
+              AND COALESCE(dkc.trang_thai, 'Approved') IN ('Approved', 'Pending')
             LIMIT 1;
             """;
 
         string shiftName;
         DateTimeOffset? checkInAt;
         DateTimeOffset? checkOutAt;
-        await using (var command = dataSource.CreateCommand(checkSql))
+        await using (var command = new NpgsqlCommand(checkSql, connection))
         {
             command.Parameters.AddWithValue("assignmentId", shiftAssignmentId);
             command.Parameters.AddWithValue("employeeId", employeeId);
@@ -501,13 +510,14 @@ public sealed class PostgresShiftAttendanceRepository(
                 RETURNING id_cham_cong;
                 """;
 
-            await using var command = dataSource.CreateCommand(insertSql);
+            await using var command = new NpgsqlCommand(insertSql, connection);
             command.Parameters.AddWithValue("assignmentId", shiftAssignmentId);
             command.Parameters.AddWithValue("employeeId", employeeId);
             command.Parameters.AddWithValue("today", today.ToDateTime(TimeOnly.MinValue));
             command.Parameters.AddWithValue("nowUtc", nowUtc);
             AddLocationParameters(command, location);
             var inserted = await command.ExecuteScalarAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
             return inserted is null
                 ? new SubmitAttendanceResult(false, "Đã tồn tại chấm công cho ca này.", shiftName, nowUtc, null, "duplicate_check_in")
                 : new SubmitAttendanceResult(true, $"Check-in thành công {shiftName}!", shiftName, nowUtc, null, null);
@@ -550,12 +560,13 @@ public sealed class PostgresShiftAttendanceRepository(
                 RETURNING id_cham_cong;
                 """;
 
-            await using var command = dataSource.CreateCommand(updateSql);
+            await using var command = new NpgsqlCommand(updateSql, connection);
             command.Parameters.AddWithValue("nowUtc", nowUtc);
             command.Parameters.AddWithValue("hours", actualHours);
             command.Parameters.AddWithValue("assignmentId", shiftAssignmentId);
             AddLocationParameters(command, location);
             var updated = await command.ExecuteScalarAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
             return updated is null
                 ? new SubmitAttendanceResult(false, "Không thể cập nhật check-out.", shiftName, nowUtc, null, "checkout_failed")
                 : new SubmitAttendanceResult(true, $"Check-out thành công {shiftName} ({actualHours} giờ)!", shiftName, nowUtc, actualHours, null);

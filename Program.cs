@@ -10,7 +10,9 @@ using manage365.Routes.API.Health;
 using manage365.Repositories.Departments;
 using manage365.Repositories.Permissions;
 using manage365.Repositories.Roles;
+using manage365.Repositories.Shifts;
 using manage365.Repositories.Users;
+using manage365.Routes.API.Shifts;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
@@ -53,7 +55,7 @@ builder.Services.AddSwaggerGen(c =>
     {
         Title = "Manage365 API",
         Version = "v1",
-        Description = "Manage365 management system API - Chấm công, Người dùng & Phân quyền"
+        Description = "Manage365 management system API - Chấm công, Phân ca linh động, Người dùng & Phân quyền"
     });
 
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -206,6 +208,7 @@ builder.Services.AddSingleton<IQrSignatureService, HmacQrSignatureService>();
 builder.Services.AddScoped<IAttendanceLocationRepository, PostgresAttendanceLocationRepository>();
 builder.Services.AddScoped<IAttendanceGeofenceService, AttendanceGeofenceService>();
 builder.Services.AddScoped<IShiftAttendanceRepository, PostgresShiftAttendanceRepository>();
+builder.Services.AddScoped<IShiftSchedulingRepository, PostgresShiftSchedulingRepository>();
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -294,10 +297,13 @@ try
 
     var deptRepo = startupScope.ServiceProvider.GetRequiredService<IDepartmentRepository>();
     await deptRepo.EnsureTablesAndSeedAsync();
+
+    var shiftRepo = startupScope.ServiceProvider.GetRequiredService<IShiftSchedulingRepository>();
+    await shiftRepo.EnsureTablesAndSeedAsync();
 }
 catch (Exception ex)
 {
-    app.Logger.LogWarning(ex, "Failed to initialize permissions or departments tables on startup.");
+    app.Logger.LogWarning(ex, "Failed to initialize permissions, departments, or shifts tables on startup.");
 }
 
 app.Run();
