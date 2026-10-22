@@ -173,9 +173,9 @@ public sealed partial class PostgresShiftSchedulingRepository
             cancellationToken.ThrowIfCancellationRequested();
             try { created.Add(await AssignShiftAsync(item, cancellationToken)); }
             catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or KeyNotFoundException)
-            { errors.Add($"NV-{item.EmployeeId:D4} ({item.ShiftDate}): {ex.Message}"); }
+            { errors.Add($"NV-{item.EmployeeId:D4} ({item.ShiftDate}, {item.CustomStartTime ?? $"mẫu #{item.ShiftTemplateId}"}–{item.CustomEndTime ?? ""}): {ex.Message}"); }
             catch (PostgresException ex) when (ex.SqlState is "23503" or "23505")
-            { errors.Add($"NV-{item.EmployeeId:D4} ({item.ShiftDate}): Dữ liệu đã thay đổi hoặc bị trùng. Vui lòng tải lại."); }
+            { errors.Add($"NV-{item.EmployeeId:D4} ({item.ShiftDate}, {item.CustomStartTime ?? $"mẫu #{item.ShiftTemplateId}"}–{item.CustomEndTime ?? ""}): Dữ liệu đã thay đổi hoặc bị trùng. Vui lòng tải lại."); }
         }
         return new(request.Assignments.Count, created.Count, errors.Count, errors, created);
     }

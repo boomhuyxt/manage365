@@ -13,6 +13,31 @@ namespace manage365.Routes.API.Shifts;
 [Route("api/shift-assignments")]
 public sealed class ShiftAssignmentsController(IShiftSchedulingRepository shiftRepo) : ControllerBase
 {
+    /// <summary>Xem số nhân viên hiện có/dự kiến theo từng khoảng giờ. Chỉ nhắc nhở, không giữ chỗ hay chặn lưu.</summary>
+    [HttpPost("coverage")]
+    [Authorize(Roles = AppRoles.Managers)]
+    [ProducesResponseType<ShiftCoverageResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ShiftCoverageResponse>> GetCoverage(
+        [FromBody] ShiftCoverageRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request.Assignments is null || request.Assignments.Count is < 1 or > 200 || request.Assignments.Any(a => a is null))
+            throw new ArgumentException("Chọn từ 1 đến 200 phân công để xem số người.");
+        var bounds = request.Assignments.Select(ShiftCoverage.Bounds).ToList();
+        var from = DateOnly.FromDateTime(bounds.Min(b => b.Start));
+        var to = DateOnly.FromDateTime(bounds.Max(b => b.End));
+        if (to.DayNumber - from.DayNumber > 31)
+            throw new ArgumentException("Khoảng xem trước không vượt quá 31 ngày.");
+        foreach (var item in request.Assignments.Where(a => a.ExcludeAssignmentId.HasValue))
+        {
+            var existing = await shiftRepo.GetAssignmentByIdAsync(item.ExcludeAssignmentId!.Value, cancellationToken);
+            if (existing is null || existing.EmployeeId != item.EmployeeId)
+                throw new ArgumentException("Phân công đang sửa không thuộc nhân viên đã chọn.");
+        }
+        var schedule = await shiftRepo.GetScheduleAsync(from.AddDays(-1), to, cancellationToken: cancellationToken);
+        return Ok(ShiftCoverage.Calculate(request.Assignments, schedule.Assignments));
+    }
+
     /// <summary>
     /// Lấy ma trận lịch phân ca làm việc theo tuần hoặc theo khoảng ngày
     /// </summary>

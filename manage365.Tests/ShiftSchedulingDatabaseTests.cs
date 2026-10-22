@@ -45,6 +45,24 @@ public sealed class ShiftSchedulingDatabaseTests
         => new(employee, date, CustomShiftName: "Ca test", CustomStartTime: start, CustomEndTime: end, IsOvernight: overnight);
 
     [Fact(Skip = "Set SHIFT_TEST_CONNECTION to the isolated database", SkipUnless = nameof(DatabaseConfigured))]
+    public async Task SharedHoursAndSplitShifts_AreAllowedAcrossEmployees()
+    {
+        await using var source = await Database();
+        var repo = new PostgresShiftSchedulingRepository(source);
+        await repo.AssignShiftAsync(Custom(start: "02:00", end: "23:00"), Ct);
+        var result = await repo.BatchAssignShiftsAsync(new([
+            Custom(employee: 102, start: "08:00", end: "12:00"),
+            Custom(employee: 102, start: "17:00", end: "21:00")]), Ct);
+        Assert.Equal(2, result.SuccessCount);
+        Assert.False((await repo.ValidateConflictAsync(102, new(2026, 10, 15), new(12, 0), new(17, 0), false, cancellationToken: Ct)).HasConflict);
+        Assert.True((await repo.ValidateConflictAsync(101, new(2026, 10, 15), new(8, 0), new(17, 0), false, cancellationToken: Ct)).HasConflict);
+        var schedule = await repo.GetScheduleAsync(new(2026, 10, 15), new(2026, 10, 15), cancellationToken: Ct);
+        var preview = ShiftCoverage.Calculate([new(102, "2026-10-15", "12:00", "17:00")], schedule.Assignments);
+        Assert.Equal([101L], Assert.Single(preview.Segments).CurrentEmployeeIds);
+        Assert.Equal([101L, 102L], preview.Segments[0].ProjectedEmployeeIds);
+    }
+
+    [Fact(Skip = "Set SHIFT_TEST_CONNECTION to the isolated database", SkipUnless = nameof(DatabaseConfigured))]
     public async Task RealSql_RoundTrip_CustomShiftAndUnassignedEmployees()
     {
         await using var source = await Database(); var repo = new PostgresShiftSchedulingRepository(source);

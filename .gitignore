@@ -364,6 +364,9 @@ FodyWeavers.xsd
 
 # Antigravity Kit
 .agents/
+.gents/
+AGENTS.md
+
 
 # Local environment secrets
 .env

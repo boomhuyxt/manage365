@@ -149,6 +149,43 @@ public sealed class ShiftSchedulingTests
     }
 
     [Fact]
+    public async Task AssignShift_AllowsMultipleEmployees_InSameOrOverlappingTimeSlot()
+    {
+        // Nhân viên 201 làm ca 02:00 - 23:00
+        var emp1Req = new AssignShiftRequest(
+            EmployeeId: 201,
+            ShiftDate: "2026-10-20",
+            CustomShiftName: "Ca Dài 1",
+            CustomStartTime: "02:00",
+            CustomEndTime: "23:00",
+            IsOvernight: false);
+        var res1 = await _assignmentsController.AssignShift(emp1Req, TestContext.Current.CancellationToken);
+        Assert.IsType<CreatedAtActionResult>(res1.Result);
+
+        // Nhân viên 202 làm ca 02:00 - 23:00 cùng ngày (trùng hoàn toàn ca với NV 201)
+        var emp2Req = new AssignShiftRequest(
+            EmployeeId: 202,
+            ShiftDate: "2026-10-20",
+            CustomShiftName: "Ca Dài 2",
+            CustomStartTime: "02:00",
+            CustomEndTime: "23:00",
+            IsOvernight: false);
+        var res2 = await _assignmentsController.AssignShift(emp2Req, TestContext.Current.CancellationToken);
+        Assert.IsType<CreatedAtActionResult>(res2.Result);
+
+        // Nhân viên 203 làm ca 08:00 - 17:00 (chồng lấn giờ trong khoảng 02:00 - 23:00)
+        var emp3Req = new AssignShiftRequest(
+            EmployeeId: 203,
+            ShiftDate: "2026-10-20",
+            CustomShiftName: "Ca Giờ Hành Chính",
+            CustomStartTime: "08:00",
+            CustomEndTime: "17:00",
+            IsOvernight: false);
+        var res3 = await _assignmentsController.AssignShift(emp3Req, TestContext.Current.CancellationToken);
+        Assert.IsType<CreatedAtActionResult>(res3.Result);
+    }
+
+    [Fact]
     public async Task ValidateConflict_DetectsShortRestGap_Warning()
     {
         // Đã có ca chiều 14:00 - 22:00 ngày 2026-10-14

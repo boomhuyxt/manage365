@@ -113,10 +113,17 @@
     if (!rows.length) { const row = node("tr"); const cell = node("td", "Không có nhân viên phù hợp.", "p-4 text-center"); cell.colSpan = 8; row.append(cell); rows.push(row); }
     $("scheduleTableBody").replaceChildren(...rows);
   }
+  function getStartTime() { return `${$("shiftStartHour").value}:${$("shiftStartMinute").value}`; }
+  function getEndTime() { return `${$("shiftEndHour").value}:${$("shiftEndMinute").value}`; }
+  function setStartTime(value) { const [h, m] = (value || "06:00").split(":"); $("shiftStartHour").value = (h || "06").padStart(2, "0"); $("shiftStartMinute").value = (m || "00").padStart(2, "0"); }
+  function setEndTime(value) { const [h, m] = (value || "14:00").split(":"); $("shiftEndHour").value = (h || "14").padStart(2, "0"); $("shiftEndMinute").value = (m || "00").padStart(2, "0"); }
+  function setTimeDisabled(disabled) { for (const id of ["shiftStartHour", "shiftStartMinute", "shiftEndHour", "shiftEndMinute"]) $(id).disabled = disabled; }
   function applyTemplate() {
     const template = state.templates.find(t => t.id === Number($("shiftTemplate").value));
-    for (const id of ["shiftName", "shiftStart", "shiftEnd", "shiftOvernight"]) $(id).disabled = Boolean(template);
-    if (template) { $("shiftName").value = template.name; $("shiftStart").value = template.startTime; $("shiftEnd").value = template.endTime; $("shiftOvernight").checked = template.isOvernight; }
+    $("shiftName").disabled = Boolean(template);
+    setTimeDisabled(Boolean(template));
+    $("shiftOvernight").disabled = Boolean(template);
+    if (template) { $("shiftName").value = template.name; setStartTime(template.startTime); setEndTime(template.endTime); $("shiftOvernight").checked = template.isOvernight; }
   }
   function openShift(employeeId, date, assignment = null) {
     if (!state.ready || !state.manager || state.saving) return;
@@ -125,15 +132,21 @@
     for (const input of $("shiftForm").querySelectorAll("input, select, textarea, button")) input.disabled = false;
     message("shiftMessage", "");
     $("shiftModalTitle").textContent = assignment ? "Chi tiết & điều chỉnh ca" : "Phân ca mới";
-    $("shiftEmployee").replaceChildren(...state.employees.filter(e => e.status.toLowerCase() === "active" || e.id === employeeId).map(e => option(e.id, `${e.displayName} (${e.code})`)));
-    if (employeeId) $("shiftEmployee").value = employeeId;
+    const empOptions = state.employees.filter(e => e.status.toLowerCase() === "active" || e.id === employeeId).map(e => option(e.id, `${e.displayName} (${e.code})`));
+    $("shiftEmployees").replaceChildren(...empOptions.map(opt => {
+      const label = node("label", null, "form-check");
+      const input = node("input", null, "form-check-input"); input.type = "checkbox"; input.value = opt.value; input.checked = Number(opt.value) === employeeId; input.disabled = Boolean(assignment);
+      label.append(input, node("span", opt.textContent, "form-check-label")); return label;
+    }));
+    $("splitIntervals").replaceChildren();
+    $("splitShiftSection").classList.toggle("d-none", Boolean(assignment));
     $("shiftDate").value = date || state.week;
-    $("shiftEmployee").disabled = $("shiftDate").disabled = Boolean(assignment);
+    $("shiftDate").disabled = Boolean(assignment);
     $("shiftTemplate").replaceChildren(option("", "Tự chọn giờ"), ...state.templates.map(t => option(t.id, `${t.name} (${t.startTime}–${t.endTime})`)));
     // Existing assignments use their stored time snapshot; selecting a template explicitly replaces it.
     $("shiftTemplate").value = "";
     $("shiftName").value = assignment?.shiftName || "Ca tùy chỉnh";
-    $("shiftStart").value = assignment?.startTime || "06:00"; $("shiftEnd").value = assignment?.endTime || "14:00";
+    setStartTime(assignment?.startTime || "06:00"); setEndTime(assignment?.endTime || "14:00");
     $("shiftOvernight").checked = assignment?.isOvernight || false; $("shiftNote").value = assignment?.note || "";
     $("repeatDays").classList.toggle("d-none", Boolean(assignment));
     $("repeatDayOptions").replaceChildren(...dates().map(day => { const label = node("label", null, "form-check"); const input = node("input", null, "form-check-input"); input.type = "checkbox"; input.value = day; label.append(input, node("span", dateLabel(day), "form-check-label")); return label; }));
@@ -141,45 +154,104 @@
     $("attendanceLock").classList.toggle("d-none", !assignment?.attendance);
     if (assignment?.attendance) for (const input of $("shiftForm").querySelectorAll("input, select, textarea, #saveShiftButton, #deleteShiftButton")) input.disabled = true;
     shiftModal.show();
+    queueCoverage();
   }
+  let disabledBeforeSave = [];
   function busy(value) {
     state.saving = value;
+    if (value) {
+      disabledBeforeSave = Array.from($("shiftForm").querySelectorAll("input, select, textarea"), input => [input, input.disabled]);
+      disabledBeforeSave.forEach(([input]) => { input.disabled = true; });
+    } else {
+      disabledBeforeSave.forEach(([input, disabled]) => { input.disabled = disabled; });
+      disabledBeforeSave = [];
+    }
     for (const button of $("shiftForm").querySelectorAll("button")) button.disabled = value;
     $("saveShiftButton").textContent = value ? "Đang xử lý…" : "Kiểm tra & lưu ca";
   }
   function batchSummary(result) { return `Đã lưu ${result.successCount}/${result.totalRequested} ca.${result.failedCount ? `\n${result.failedCount} ca không lưu được:\n${result.errors.join("\n")}` : ""}`; }
+  function selectedEmployees() { return Array.from($("shiftEmployees").querySelectorAll("input:checked"), el => Number(el.value)); }
+  function intervalRows() {
+    return [{ startTime: getStartTime(), endTime: getEndTime(), isOvernight: $("shiftOvernight").checked },
+      ...Array.from($("splitIntervals").children, row => ({ startTime: `${row.querySelector(".start-hour").value}:${row.querySelector(".start-minute").value}`, endTime: `${row.querySelector(".end-hour").value}:${row.querySelector(".end-minute").value}`, isOvernight: row.querySelector(".overnight").checked }))];
+  }
+  function proposals() {
+    const employees = selectedEmployees();
+    const days = Array.from(new Set([$("shiftDate").value, ...(!state.editing ? Array.from($("repeatDayOptions").querySelectorAll("input:checked"), el => el.value) : [])]));
+    const intervals = intervalRows();
+    for (const time of intervals) if (time.startTime === time.endTime || (time.isOvernight ? time.endTime > time.startTime : time.endTime < time.startTime)) throw new Error("Kiểm tra giờ và lựa chọn qua đêm. Mỗi khoảng phải dài hơn 0 và ngắn hơn 24 giờ.");
+    if (!employees.length || !days[0]) throw new Error("Chọn nhân viên và ngày làm việc.");
+    const result = days.flatMap(shiftDate => employees.flatMap(employeeId => intervals.map(time => ({ employeeId, shiftDate, ...time, excludeAssignmentId: state.editing?.assignmentId ?? null }))));
+    const bounds = p => { const start = Date.parse(`${p.shiftDate}T${p.startTime}:00Z`); const end = Date.parse(`${p.shiftDate}T${p.endTime}:00Z`) + (p.isOvernight ? 86400000 : 0); return { start, end }; };
+    for (let i = 0; i < result.length; i++) for (let j = i + 1; j < result.length; j++) {
+      if (result[i].employeeId !== result[j].employeeId) continue;
+      const a = bounds(result[i]), b = bounds(result[j]);
+      if (a.start < b.end && b.start < a.end) throw new Error("Các khoảng ca gãy của cùng nhân viên không được chồng giờ.");
+    }
+    return result;
+  }
+  let coverageTimer, coverageRequest = 0;
+  function queueCoverage() {
+    clearTimeout(coverageTimer); const request = ++coverageRequest;
+    $("selectedEmployeeCount").textContent = `Đã chọn ${selectedEmployees().length} nhân viên`;
+    $("coveragePreview").textContent = "Đang cập nhật số người…";
+    coverageTimer = setTimeout(() => updateCoverage(request), 300);
+  }
+  async function updateCoverage(request) {
+    try {
+      const pending = proposals();
+      // Query all proposed people together; splitting would give incorrect projected counts.
+      if (pending.length > 200) throw new Error("Chọn tối đa 200 phân công mỗi lần để xem trước và lưu.");
+      const data = await api("/api/shift-assignments/coverage", "POST", { assignments: pending });
+      if (request !== coverageRequest) return;
+      const preview = $("coveragePreview");
+      preview.replaceChildren(node("strong", "Nhân viên cùng khung giờ · hiện có → sau khi lưu"));
+      for (const segment of data.segments) {
+        const names = segment.projectedEmployeeIds.map(id => state.employees.find(e => e.id === id)?.displayName || `NV-${id}`).join(", ");
+        const detail = node("details");
+        detail.append(node("summary", `${dateLabel(segment.start.slice(0, 10))} ${segment.start.slice(11, 16)} – ${segment.end.slice(0, 10) !== segment.start.slice(0, 10) ? dateLabel(segment.end.slice(0, 10)) + " " : ""}${segment.end.slice(11, 16)}: ${segment.currentEmployeeIds.length} → ${segment.projectedEmployeeIds.length} người`), node("span", names));
+        preview.append(detail);
+      }
+      preview.append(node("small", "Số dự kiến tại lúc tải. Nhiều nhân viên cùng giờ vẫn được lưu.", "text-secondary"));
+    } catch (error) { if (request === coverageRequest) $("coveragePreview").textContent = `Chưa có thống kê: ${error.message}`; }
+  }
+  $("addIntervalButton").addEventListener("click", () => {
+    const row = node("div", null, "d-flex gap-2 align-items-center flex-wrap mb-2");
+    const select = (count, value, className, label) => { const el = node("select", null, `form-select form-select-sm w-auto ${className}`); el.setAttribute("aria-label", label); for (let i = 0; i < count; i++) { const v = String(i).padStart(2, "0"); el.append(option(v, v)); } el.value = value; return el; };
+    const overnight = node("input", null, "overnight form-check-input"); overnight.type = "checkbox";
+    const label = node("label", null, "d-flex gap-1"); label.append(overnight, node("span", "Qua đêm"));
+    const remove = node("button", "Bỏ khoảng", "btn btn-sm btn-outline-danger"); remove.type = "button"; remove.addEventListener("click", () => { row.remove(); queueCoverage(); });
+    row.append(select(24, "17", "start-hour", "Giờ bắt đầu khoảng"), select(60, "00", "start-minute", "Phút bắt đầu khoảng"), node("span", "–"), select(24, "21", "end-hour", "Giờ kết thúc khoảng"), select(60, "00", "end-minute", "Phút kết thúc khoảng"), label, remove);
+    $("splitIntervals").append(row); queueCoverage();
+  });
+  $("shiftForm").addEventListener("change", queueCoverage);
   $("shiftForm").addEventListener("submit", async event => {
     event.preventDefault(); if (state.saving || !$("shiftForm").reportValidity()) return;
-    const employeeId = Number($("shiftEmployee").value), templateId = Number($("shiftTemplate").value) || null;
-    const dayList = Array.from(new Set([$("shiftDate").value, ...(!state.editing ? Array.from($("repeatDayOptions").querySelectorAll("input:checked"), el => el.value) : [])]));
-    const startTime = $("shiftStart").value, endTime = $("shiftEnd").value, overnight = $("shiftOvernight").checked;
-    if (startTime === endTime || (overnight ? endTime > startTime : endTime < startTime)) { message("shiftMessage", "Kiểm tra giờ bắt đầu/kết thúc và lựa chọn qua đêm. Ca phải dài hơn 0 và ngắn hơn 24 giờ."); return; }
+    let pending;
+    try { pending = proposals(); if (pending.length > 200) throw new Error("Chọn tối đa 200 phân công mỗi lần."); }
+    catch (error) { message("shiftMessage", error.message); return; }
     busy(true); message("shiftMessage", "");
-    let partial = false;
+    let lockRetry = false;
     try {
-      const warnings = [];
-      for (const date of dayList) {
-        const validation = await api("/api/shift-assignments/validate", "POST", { employeeId, shiftDate: date, startTime, endTime, isOvernight: overnight, excludeAssignmentId: state.editing?.assignmentId ?? null });
-        if (validation.hasConflict && dayList.length === 1) throw new Error(validation.message);
-        warnings.push(...validation.warnings);
-      }
-      if (warnings.length && !window.confirm(`${Array.from(new Set(warnings)).join("\n")}\n\nBạn vẫn muốn lưu ca?`)) return;
-      const note = $("shiftNote").value.trim();
+      const note = $("shiftNote").value.trim(), name = $("shiftName").value.trim();
       if (state.editing) {
-        const body = templateId ? { shiftTemplateId: templateId, note } : { shiftName: $("shiftName").value.trim(), startTime, endTime, isOvernight: overnight, note };
-        await api(`/api/shift-assignments/${state.editing.assignmentId}`, "PUT", body);
+        const validation = await api("/api/shift-assignments/validate", "POST", pending[0]);
+        if (validation.hasConflict) throw new Error(validation.message);
+        const templateId = Number($("shiftTemplate").value) || null;
+        await api(`/api/shift-assignments/${state.editing.assignmentId}`, "PUT", templateId ? { shiftTemplateId: templateId, note } : { shiftName: name, startTime: pending[0].startTime, endTime: pending[0].endTime, isOvernight: pending[0].isOvernight, note });
       } else {
-        const requests = dayList.map(shiftDate => ({ employeeId, shiftDate, note, ...(templateId ? { shiftTemplateId: templateId } : { customShiftName: $("shiftName").value.trim(), customStartTime: startTime, customEndTime: endTime, isOvernight: overnight }) }));
-        if (requests.length === 1) await api("/api/shift-assignments", "POST", requests[0]);
-        else {
-          const result = await api("/api/shift-assignments/batch", "POST", { assignments: requests });
-          if (result.failedCount) { partial = true; await load(); message("shiftMessage", `${batchSummary(result)}\nĐóng cửa sổ và chọn lại các ngày lỗi để thử lại.`, "warning"); return; }
-        }
+        // The server validates each employee inside its write transaction. A conflict for one person cannot block others.
+        const templateId = Number($("shiftTemplate").value) || null, intervalCount = intervalRows().length;
+        const assignments = pending.map((p, i) => ({ employeeId: p.employeeId, shiftDate: p.shiftDate, note, ...(templateId && i % intervalCount === 0 ? { shiftTemplateId: templateId } : { customShiftName: name, customStartTime: p.startTime, customEndTime: p.endTime, isOvernight: p.isOvernight }) }));
+        lockRetry = true;
+        const result = await api("/api/shift-assignments/batch", "POST", { assignments });
+        if (result.failedCount) { await load(); message("shiftMessage", `${batchSummary(result)}\nĐóng cửa sổ, đối chiếu lịch rồi chỉ chọn lại các ca lỗi.`, "warning"); queueCoverage(); return; }
+        lockRetry = false;
       }
       shiftModal.hide(); await load();
       message("pageMessage", state.ready ? "Đã lưu phân ca." : "Đã lưu ca nhưng tải lại lịch thất bại. Chọn Tải lại; không gửi lại ca vừa lưu.", state.ready ? "success" : "warning");
-    } catch (error) { message("shiftMessage", `${error.message}\nNếu kết nối bị gián đoạn, tải lại lịch để kiểm tra trước khi gửi lại.`); }
-    finally { busy(false); if (partial) $("saveShiftButton").disabled = true; }
+    } catch (error) { message("shiftMessage", `${error.message}\nTải lại lịch để đối chiếu trước khi thử lại.`); }
+    finally { busy(false); if (lockRetry) $("saveShiftButton").disabled = true; }
   });
   $("deleteShiftButton").addEventListener("click", async () => {
     if (!state.editing || state.saving || !window.confirm("Hủy ca này? Ca đã hủy sẽ không còn trong lịch làm việc.")) return;
@@ -212,6 +284,11 @@
     try { const result = await api("/api/shift-assignments/copy-week", "POST", { sourceStartDate: sourceWeek, targetStartDate: target }); message("copyMessage", batchSummary(result), result.failedCount ? "warning" : "success"); state.week = target; await load(); }
     catch (error) { message("copyMessage", `${error.message}\nTải lại lịch đích để kiểm tra trước khi thử lại.`); }
     finally { copyBusy = false; $("copyTarget").disabled = false; }
+  });
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible" && state.user && !state.saving) {
+      if ($("shiftModal").classList.contains("show")) queueCoverage(); else load();
+    }
   });
   async function start() {
     if (!token()) { location.replace("/Account/Login"); return; }

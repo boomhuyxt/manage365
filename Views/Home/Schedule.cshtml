@@ -48,13 +48,31 @@
                 <div class="modal-body">
                     <div id="shiftMessage" class="alert d-none" role="alert"></div>
                     <div class="row g-3">
-                        <div class="col-md-6"><label for="shiftEmployee" class="form-label">Nhân viên</label><select id="shiftEmployee" class="form-select" required></select></div>
+                        <div class="col-md-6"><span class="form-label">Nhân viên nhận ca</span><div id="shiftEmployees" class="border rounded p-2 overflow-auto" style="max-height:180px" role="group" aria-label="Chọn nhân viên nhận ca"></div><small id="selectedEmployeeCount" class="text-secondary"></small></div>
                         <div class="col-md-6"><label for="shiftDate" class="form-label">Ngày làm việc</label><input id="shiftDate" type="date" class="form-control" required /></div>
                         <div class="col-12"><label for="shiftTemplate" class="form-label">Ca mẫu</label><select id="shiftTemplate" class="form-select"><option value="">Tự chọn giờ</option></select></div>
                         <div class="col-12"><label for="shiftName" class="form-label">Tên ca</label><input id="shiftName" class="form-control" maxlength="150" required value="Ca tùy chỉnh" /></div>
-                        <div class="col-6"><label for="shiftStart" class="form-label">Bắt đầu</label><input id="shiftStart" type="time" class="form-control" required /></div>
-                        <div class="col-6"><label for="shiftEnd" class="form-label">Kết thúc</label><input id="shiftEnd" type="time" class="form-control" required /></div>
+                        <div class="col-6">
+                            <label class="form-label">Bắt đầu</label>
+                            <div class="d-flex gap-1 align-items-center">
+                                <select id="shiftStartHour" class="form-select form-select-sm" required style="width:auto">@for(int h=0;h<24;h++){<option value="@h.ToString("D2")">@h.ToString("D2")</option>}</select>
+                                <span class="fw-bold">:</span>
+                                <select id="shiftStartMinute" class="form-select form-select-sm" required style="width:auto">@for(int m=0;m<60;m++){<option value="@m.ToString("D2")">@m.ToString("D2")</option>}</select>
+                                <span class="badge bg-dark ms-1">24H</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">Kết thúc</label>
+                            <div class="d-flex gap-1 align-items-center">
+                                <select id="shiftEndHour" class="form-select form-select-sm" required style="width:auto">@for(int h=0;h<24;h++){<option value="@h.ToString("D2")">@h.ToString("D2")</option>}</select>
+                                <span class="fw-bold">:</span>
+                                <select id="shiftEndMinute" class="form-select form-select-sm" required style="width:auto">@for(int m=0;m<60;m++){<option value="@m.ToString("D2")">@m.ToString("D2")</option>}</select>
+                                <span class="badge bg-dark ms-1">24H</span>
+                            </div>
+                        </div>
                         <div class="col-12"><label class="form-check"><input id="shiftOvernight" class="form-check-input" type="checkbox" /><span class="form-check-label">Kết thúc vào ngày hôm sau</span></label></div>
+                        <div class="col-12" id="splitShiftSection"><div id="splitIntervals"></div><button type="button" id="addIntervalButton" class="btn btn-sm btn-outline-secondary">+ Thêm khoảng làm (ca gãy)</button><p class="small text-secondary mt-1">Mỗi khoảng được lưu riêng. Khoảng nghỉ không tính là đang làm.</p></div>
+                        <div class="col-12"><div id="coveragePreview" class="small border rounded p-2 bg-light" role="status" aria-live="polite">Chọn nhân viên để xem số người làm cùng giờ.</div></div>
                         <div class="col-12"><label for="shiftNote" class="form-label">Ghi chú</label><textarea id="shiftNote" class="form-control" maxlength="2000" rows="2"></textarea></div>
                         <div class="col-12" id="repeatDays"><fieldset><legend class="fs-6">Áp dụng thêm cho ngày khác trong tuần</legend><div id="repeatDayOptions" class="d-flex gap-3 flex-wrap"></div></fieldset></div>
                     </div>
