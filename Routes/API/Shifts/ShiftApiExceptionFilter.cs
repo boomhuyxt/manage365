@@ -22,7 +22,8 @@ public sealed class ShiftApiExceptionFilter : ExceptionFilterAttribute
         if (status == 0) return;
         context.Result = new ObjectResult(new ProblemDetails
         {
-            Status = status, Title = message, Extensions = { ["code"] = code }
+            Status = status, Title = message,
+            Extensions = { ["code"] = code, ["traceId"] = context.HttpContext.TraceIdentifier }
         }) { StatusCode = status };
         context.ExceptionHandled = true;
     }

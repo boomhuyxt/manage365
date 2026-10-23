@@ -318,13 +318,21 @@ public sealed partial class PostgresShiftSchedulingRepository(NpgsqlDataSource d
                    cc.gio_vao,
                    cc.gio_ra,
                    cc.so_gio_thuc_te,
-                   cc.trang_thai
+                   cc.trang_thai,
+                   leave_info.trang_thai
             FROM public.dang_ky_ca dkc
             JOIN public.ca_lam cl ON cl.id = dkc.id_ca_lam
             JOIN public.nhan_vien nv ON nv.id = dkc.id_nhan_vien
             LEFT JOIN public.phong_ban pb ON pb.id = nv.id_phong_ban
             LEFT JOIN public.mau_ca_lam mcl ON mcl.id = cl.id_mau_ca
             LEFT JOIN public.cham_cong cc ON cc.id_dang_ky_ca = dkc.id
+            LEFT JOIN LATERAL (
+                SELECT dnp.trang_thai
+                FROM public.don_nghi_phep_ca dnpc
+                JOIN public.don_nghi_phep dnp ON dnp.id = dnpc.id_don_nghi_phep
+                WHERE dnpc.id_dang_ky_ca = dkc.id AND dnp.trang_thai = 'Approved'
+                LIMIT 1
+            ) AS leave_info ON TRUE
             WHERE COALESCE(dkc.trang_thai, 'Approved') != 'Cancelled' AND cl.ngay_lam >= @startDate AND cl.ngay_lam <= @endDate
               AND (CAST(@departmentId AS bigint) IS NULL OR nv.id_phong_ban = @departmentId)
               AND (CAST(@employeeId AS bigint) IS NULL OR nv.id = @employeeId)
@@ -371,8 +379,16 @@ public sealed partial class PostgresShiftSchedulingRepository(NpgsqlDataSource d
                         Status: reader.IsDBNull(18) ? "Pending" : reader.GetString(18));
                 }
 
-                employeeSet.Add(empId);
-                dayAssignmentCount[shiftDate] = dayAssignmentCount.GetValueOrDefault(shiftDate) + 1;
+                var isOnLeave = !reader.IsDBNull(19);
+                var leaveStatus = isOnLeave ? reader.GetString(19) : null;
+                if (!isOnLeave)
+                {
+                    employeeSet.Add(empId);
+                }
+                if (!isOnLeave)
+                {
+                    dayAssignmentCount[shiftDate] = dayAssignmentCount.GetValueOrDefault(shiftDate) + 1;
+                }
 
                 assignments.Add(new ShiftAssignmentDto(
                     AssignmentId: assignmentId,
@@ -390,7 +406,9 @@ public sealed partial class PostgresShiftSchedulingRepository(NpgsqlDataSource d
                     Color: color,
                     Status: status,
                     Note: note,
-                    Attendance: attendance));
+                    Attendance: attendance,
+                    IsOnLeave: isOnLeave,
+                    LeaveStatus: leaveStatus));
             }
         }
 
@@ -436,13 +454,21 @@ public sealed partial class PostgresShiftSchedulingRepository(NpgsqlDataSource d
                    cc.gio_vao,
                    cc.gio_ra,
                    cc.so_gio_thuc_te,
-                   cc.trang_thai
+                   cc.trang_thai,
+                   leave_info.trang_thai
             FROM public.dang_ky_ca dkc
             JOIN public.ca_lam cl ON cl.id = dkc.id_ca_lam
             JOIN public.nhan_vien nv ON nv.id = dkc.id_nhan_vien
             LEFT JOIN public.phong_ban pb ON pb.id = nv.id_phong_ban
             LEFT JOIN public.mau_ca_lam mcl ON mcl.id = cl.id_mau_ca
             LEFT JOIN public.cham_cong cc ON cc.id_dang_ky_ca = dkc.id
+            LEFT JOIN LATERAL (
+                SELECT dnp.trang_thai
+                FROM public.don_nghi_phep_ca dnpc
+                JOIN public.don_nghi_phep dnp ON dnp.id = dnpc.id_don_nghi_phep
+                WHERE dnpc.id_dang_ky_ca = dkc.id AND dnp.trang_thai = 'Approved'
+                LIMIT 1
+            ) AS leave_info ON TRUE
             WHERE dkc.id = @id
             LIMIT 1;
             """;
@@ -486,7 +512,9 @@ public sealed partial class PostgresShiftSchedulingRepository(NpgsqlDataSource d
                 Color: reader.GetString(11),
                 Status: reader.IsDBNull(12) ? "Approved" : reader.GetString(12),
                 Note: reader.IsDBNull(13) ? null : reader.GetString(13),
-                Attendance: attendance);
+                Attendance: attendance,
+                IsOnLeave: !reader.IsDBNull(19),
+                LeaveStatus: reader.IsDBNull(19) ? null : reader.GetString(19));
         }
 
         return null;
@@ -540,6 +568,36 @@ public sealed partial class PostgresShiftSchedulingRepository(NpgsqlDataSource d
         command.Parameters.AddWithValue("nextDay", nextDay.ToDateTime(TimeOnly.MinValue));
 
         var proposedStart = shiftDate.ToDateTime(startTime);
+        var proposedEndUtc = new DateTimeOffset(isOvernight ? shiftDate.AddDays(1).ToDateTime(endTime) : shiftDate.ToDateTime(endTime), TimeSpan.FromHours(7)).ToUniversalTime();
+        var proposedStartUtc = new DateTimeOffset(proposedStart, TimeSpan.FromHours(7)).ToUniversalTime();
+
+        const string leaveCheckSql = """
+            SELECT dnp.id
+            FROM public.don_nghi_phep_khoang dnpk
+            JOIN public.don_nghi_phep dnp ON dnp.id = dnpk.id_don_nghi_phep
+            WHERE dnp.id_nhan_vien = @employeeId
+              AND dnp.trang_thai = 'Approved'
+              AND dnpk.gio_bat_dau_utc < @proposedEndUtc
+              AND @proposedStartUtc < dnpk.gio_ket_thuc_utc
+            LIMIT 1;
+            """;
+
+        await using (var leaveCmd = CreateCommand(leaveCheckSql, connection))
+        {
+            leaveCmd.Parameters.AddWithValue("employeeId", employeeId);
+            leaveCmd.Parameters.AddWithValue("proposedStartUtc", proposedStartUtc);
+            leaveCmd.Parameters.AddWithValue("proposedEndUtc", proposedEndUtc);
+            var leaveConflictId = await leaveCmd.ExecuteScalarAsync(cancellationToken);
+            if (leaveConflictId is not null)
+            {
+                return new ValidateShiftConflictResponse(
+                    HasConflict: true,
+                    ConflictType: "APPROVED_LEAVE_CONFLICT",
+                    Message: "Nhân viên đã được duyệt nghỉ phép trong khoảng thời gian này.",
+                    Warnings: [],
+                    ConflictingShifts: []);
+            }
+        }
         var proposedEnd = isOvernight ? shiftDate.AddDays(1).ToDateTime(endTime) : shiftDate.ToDateTime(endTime);
 
         var conflictingShifts = new List<ConflictingShiftDto>();

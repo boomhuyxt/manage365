@@ -24,7 +24,7 @@ public static class ShiftCoverage
     public static ShiftCoverageResponse Calculate(List<ShiftCoverageInterval> proposals, List<ShiftAssignmentDto> assignments)
     {
         var proposed = proposals.Select(p => (p.EmployeeId, p.ExcludeAssignmentId, Range: Bounds(p))).ToList();
-        var existing = assignments.Where(a => a.Status != "Cancelled")
+        var existing = assignments.Where(a => a.Status != "Cancelled" && !a.IsOnLeave)
             .Select(a => (a.EmployeeId, a.AssignmentId, Range: Bounds(new(a.EmployeeId, a.ShiftDate, a.StartTime, a.EndTime, a.IsOvernight))))
             .Where(a => proposed.Any(p => a.Range.Start < p.Range.End && p.Range.Start < a.Range.End)).ToList();
         var excluded = proposals.Where(p => p.ExcludeAssignmentId.HasValue).Select(p => p.ExcludeAssignmentId!.Value).ToHashSet();

@@ -61,7 +61,9 @@ public sealed record ShiftAssignmentDto(
     string Color,
     string Status,
     string? Note,
-    ShiftAttendanceBriefDto? Attendance);
+    ShiftAttendanceBriefDto? Attendance,
+    bool IsOnLeave = false,
+    string? LeaveStatus = null);
 
 /// <summary>
 /// Tóm tắt trạng thái chấm công của ca làm.

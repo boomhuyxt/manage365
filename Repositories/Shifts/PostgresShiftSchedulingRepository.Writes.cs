@@ -118,6 +118,21 @@ public sealed partial class PostgresShiftSchedulingRepository
         if (existing.Status == "Cancelled")
             throw new InvalidOperationException("Ca đã hủy. Hãy tạo phân ca mới nếu cần.");
 
+        const string checkLeaveSql = """
+            SELECT 1 FROM public.don_nghi_phep_ca dnpc
+            JOIN public.don_nghi_phep dnp ON dnp.id = dnpc.id_don_nghi_phep
+            WHERE dnpc.id_dang_ky_ca = @assignmentId AND dnp.trang_thai = 'Approved'
+            LIMIT 1;
+            """;
+        await using (var checkLeaveCmd = new NpgsqlCommand(checkLeaveSql, connection))
+        {
+            checkLeaveCmd.Parameters.AddWithValue("assignmentId", assignmentId);
+            if (await checkLeaveCmd.ExecuteScalarAsync(cancellationToken) is not null)
+            {
+                throw new InvalidOperationException("Ca làm việc này đã được gắn với đơn nghỉ phép đã duyệt. Vui lòng thu hồi đơn nghỉ phép trước khi điều chỉnh hoặc hủy ca.");
+            }
+        }
+
         var shiftId = existing.ShiftId;
         var changesTime = request.ShiftTemplateId.HasValue || request.ShiftName is not null || request.StartTime is not null || request.EndTime is not null || request.IsOvernight.HasValue;
         if (request.Status == "Cancelled" && changesTime) throw new ArgumentException("Hủy ca không được đồng thời đổi giờ.");

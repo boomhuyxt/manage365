@@ -31,10 +31,18 @@ public sealed class PostgresShiftAttendanceRepository(
                    COALESCE(cl.qua_dem, FALSE),
                    cc.gio_vao,
                    cc.gio_ra,
-                   cc.so_gio_thuc_te
+                   cc.so_gio_thuc_te,
+                   leave_info.trang_thai
             FROM public.dang_ky_ca AS dkc
             JOIN public.ca_lam AS cl ON cl.id = dkc.id_ca_lam
             LEFT JOIN public.cham_cong AS cc ON cc.id_dang_ky_ca = dkc.id
+            LEFT JOIN LATERAL (
+                SELECT dnp.trang_thai
+                FROM public.don_nghi_phep_ca dnpc
+                JOIN public.don_nghi_phep dnp ON dnp.id = dnpc.id_don_nghi_phep
+                WHERE dnpc.id_dang_ky_ca = dkc.id AND dnp.trang_thai = 'Approved'
+                LIMIT 1
+            ) AS leave_info ON TRUE
             WHERE dkc.id_nhan_vien = @employeeId
               AND (dkc.trang_thai IN ('Approved', 'Pending') OR dkc.trang_thai IS NULL)
               AND (
@@ -59,6 +67,10 @@ public sealed class PostgresShiftAttendanceRepository(
                 DateTimeOffset? checkOutAt = reader.IsDBNull(8) ? null : reader.GetFieldValue<DateTimeOffset>(8);
                 decimal? actualHours = reader.IsDBNull(9) ? null : reader.GetDecimal(9);
                 var state = BuildActionState(checkInAt, checkOutAt, actualHours, timeZone, false);
+                if (!reader.IsDBNull(10) && checkInAt is null)
+                {
+                    state = ("OnLeave", "NONE", false, "Đã duyệt nghỉ phép");
+                }
 
                 results.Add(new EligibleShiftDto(
                     ShiftAssignmentId: reader.GetInt64(0),
@@ -78,7 +90,7 @@ public sealed class PostgresShiftAttendanceRepository(
             }
         }
 
-        var unassigned = await GetUnassignedOptionAsync(employeeId, today, timeZone, cancellationToken);
+        var unassigned = await GetUnassignedOptionAsync(employeeId, today, timeZone, nowUtc, cancellationToken);
         if (results.Count == 0 || unassigned.Status == "CheckedIn")
         {
             results.Add(unassigned);
@@ -112,7 +124,10 @@ public sealed class PostgresShiftAttendanceRepository(
         CancellationToken cancellationToken = default)
     {
         const string sql = """
-            SELECT cc.id,
+            SELECT (COUNT(*) OVER())::int AS total_today,
+                   (COUNT(*) FILTER (WHERE cc.gio_ra IS NULL) OVER())::int AS checked_in_count,
+                   (COUNT(*) FILTER (WHERE cc.gio_ra IS NOT NULL) OVER())::int AS completed_count,
+                   cc.id,
                    cc.id_dang_ky_ca,
                    COALESCE(cl.loai_ca, @unassignedShiftName),
                    cc.ngay_cham_cong,
@@ -215,33 +230,40 @@ public sealed class PostgresShiftAttendanceRepository(
             """;
 
         await using var command = dataSource.CreateCommand(sql);
+        command.CommandTimeout = 15;
         command.Parameters.AddWithValue("today", today.ToDateTime(TimeOnly.MinValue));
         command.Parameters.AddWithValue("limit", limit);
         command.Parameters.AddWithValue("unassignedShiftName", UnassignedShiftName);
 
         var records = new List<AdminAttendanceRecordDto>();
+        var totalToday = 0;
+        var checkedIn = 0;
+        var completed = 0;
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
+            totalToday = reader.GetInt32(0);
+            checkedIn = reader.GetInt32(1);
+            completed = reader.GetInt32(2);
             records.Add(new AdminAttendanceRecordDto(
-                AttendanceId: reader.GetInt64(0),
-                EmployeeId: reader.GetInt64(1),
-                EmployeeName: reader.GetString(2),
-                EmployeeEmail: reader.IsDBNull(3) ? null : reader.GetString(3),
-                ShiftName: reader.GetString(4),
-                CheckInAt: reader.GetFieldValue<DateTimeOffset>(5),
-                CheckOutAt: reader.IsDBNull(6) ? null : reader.GetFieldValue<DateTimeOffset>(6),
-                ActualHours: reader.IsDBNull(7) ? null : reader.GetDecimal(7),
-                Status: reader.GetString(8),
-                CheckInLocation: ReadLocation(reader, 9),
-                CheckOutLocation: ReadLocation(reader, 18)));
+                AttendanceId: reader.GetInt64(3),
+                EmployeeId: reader.GetInt64(4),
+                EmployeeName: reader.GetString(5),
+                EmployeeEmail: reader.IsDBNull(6) ? null : reader.GetString(6),
+                ShiftName: reader.GetString(7),
+                CheckInAt: reader.GetFieldValue<DateTimeOffset>(8),
+                CheckOutAt: reader.IsDBNull(9) ? null : reader.GetFieldValue<DateTimeOffset>(9),
+                ActualHours: reader.IsDBNull(10) ? null : reader.GetDecimal(10),
+                Status: reader.GetString(11),
+                CheckInLocation: ReadLocation(reader, 12),
+                CheckOutLocation: ReadLocation(reader, 21)));
         }
 
         return new AdminAttendanceSnapshotDto(
             ServerTimeUtc: nowUtc,
-            TotalToday: records.Count,
-            CheckedIn: records.Count(record => record.CheckOutAt is null),
-            Completed: records.Count(record => record.CheckOutAt is not null),
+            TotalToday: totalToday,
+            CheckedIn: checkedIn,
+            Completed: completed,
             Records: records);
     }
 
@@ -249,6 +271,7 @@ public sealed class PostgresShiftAttendanceRepository(
         long employeeId,
         DateOnly today,
         TimeZoneInfo timeZone,
+        DateTimeOffset nowUtc,
         CancellationToken cancellationToken)
     {
         const string sql = """
@@ -276,6 +299,19 @@ public sealed class PostgresShiftAttendanceRepository(
         }
 
         var state = BuildActionState(checkInAt, checkOutAt, actualHours, timeZone, true);
+        await reader.CloseAsync();
+        if (checkInAt is null)
+        {
+            await using var leave = dataSource.CreateCommand("""
+                SELECT 1 FROM public.don_nghi_phep_khoang k JOIN public.don_nghi_phep d ON d.id=k.id_don_nghi_phep
+                WHERE d.id_nhan_vien=@employee AND d.trang_thai='Approved'
+                  AND k.gio_bat_dau_utc <= @now AND @now < k.gio_ket_thuc_utc LIMIT 1
+                """);
+            leave.Parameters.AddWithValue("employee", employeeId);
+            leave.Parameters.AddWithValue("now", nowUtc);
+            if (await leave.ExecuteScalarAsync(cancellationToken) is not null)
+                state = ("OnLeave", "NONE", false, "Đã duyệt nghỉ phép");
+        }
         return new EligibleShiftDto(
             ShiftAssignmentId: null,
             ShiftId: null,
@@ -300,6 +336,13 @@ public sealed class PostgresShiftAttendanceRepository(
         DateTimeOffset nowUtc,
         CancellationToken cancellationToken)
     {
+        await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        await using (var employeeLock = new NpgsqlCommand("SELECT id FROM public.nhan_vien WHERE id=@id FOR UPDATE", connection))
+        {
+            employeeLock.Parameters.AddWithValue("id", employeeId);
+            await employeeLock.ExecuteScalarAsync(cancellationToken);
+        }
         action = action.Trim().ToUpperInvariant();
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(nowUtc, GetStoreTimeZone()).DateTime);
 
@@ -315,7 +358,7 @@ public sealed class PostgresShiftAttendanceRepository(
         long? attendanceId = null;
         DateTimeOffset? checkInAt = null;
         DateTimeOffset? checkOutAt = null;
-        await using (var command = dataSource.CreateCommand(currentSql))
+        await using (var command = new NpgsqlCommand(currentSql, connection))
         {
             command.Parameters.AddWithValue("employeeId", employeeId);
             command.Parameters.AddWithValue("today", today.ToDateTime(TimeOnly.MinValue));
@@ -330,6 +373,23 @@ public sealed class PostgresShiftAttendanceRepository(
 
         if (action == "CHECK_IN")
         {
+            const string checkApprovedLeaveSql = """
+                SELECT 1 FROM public.don_nghi_phep_khoang dnpk
+                JOIN public.don_nghi_phep dnp ON dnp.id = dnpk.id_don_nghi_phep
+                WHERE dnp.id_nhan_vien = @employeeId AND dnp.trang_thai = 'Approved'
+                  AND dnpk.gio_bat_dau_utc <= @nowUtc AND @nowUtc < dnpk.gio_ket_thuc_utc
+                LIMIT 1;
+                """;
+            await using (var checkLeaveCmd = new NpgsqlCommand(checkApprovedLeaveSql, connection))
+            {
+                checkLeaveCmd.Parameters.AddWithValue("employeeId", employeeId);
+                checkLeaveCmd.Parameters.AddWithValue("nowUtc", nowUtc);
+                if (await checkLeaveCmd.ExecuteScalarAsync(cancellationToken) is not null)
+                {
+                    return Failure("Bạn đã được duyệt nghỉ phép hôm nay. Không thể thực hiện check-in.", nowUtc, "approved_leave_conflict");
+                }
+            }
+
             if (checkInAt is not null)
             {
                 return Failure("Bạn đã check-in hôm nay.", checkInAt.Value, "already_checked_in");
@@ -362,12 +422,13 @@ public sealed class PostgresShiftAttendanceRepository(
                 RETURNING id_cham_cong;
                 """;
 
-            await using var command = dataSource.CreateCommand(insertSql);
+            await using var command = new NpgsqlCommand(insertSql, connection);
             command.Parameters.AddWithValue("employeeId", employeeId);
             command.Parameters.AddWithValue("today", today.ToDateTime(TimeOnly.MinValue));
             command.Parameters.AddWithValue("nowUtc", nowUtc);
             AddLocationParameters(command, location);
             var inserted = await command.ExecuteScalarAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
             return inserted is null
                 ? Failure("Bạn đã check-in hôm nay.", nowUtc, "duplicate_check_in")
                 : Success("Check-in thành công!", nowUtc, null);
@@ -391,7 +452,11 @@ public sealed class PostgresShiftAttendanceRepository(
                     UPDATE public.cham_cong
                     SET gio_ra = @nowUtc,
                         so_gio_thuc_te = @hours,
-                        trang_thai = 'Completed',
+                        trang_thai = CASE WHEN EXISTS (
+                            SELECT 1 FROM public.don_nghi_phep_khoang k JOIN public.don_nghi_phep d ON d.id=k.id_don_nghi_phep
+                            WHERE d.id_nhan_vien=cham_cong.id_nhan_vien AND d.trang_thai='Approved'
+                              AND cham_cong.gio_vao < k.gio_ket_thuc_utc AND k.gio_bat_dau_utc < @nowUtc
+                        ) THEN 'NeedsReview' ELSE 'Completed' END,
                         updated_at = @nowUtc
                     WHERE id = @attendanceId AND gio_ra IS NULL
                     RETURNING id
@@ -410,12 +475,13 @@ public sealed class PostgresShiftAttendanceRepository(
                 RETURNING id_cham_cong;
                 """;
 
-            await using var command = dataSource.CreateCommand(updateSql);
+            await using var command = new NpgsqlCommand(updateSql, connection);
             command.Parameters.AddWithValue("nowUtc", nowUtc);
             command.Parameters.AddWithValue("hours", actualHours);
             command.Parameters.AddWithValue("attendanceId", attendanceId.Value);
             AddLocationParameters(command, location);
             var updated = await command.ExecuteScalarAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
             return updated is null
                 ? Failure("Không thể cập nhật check-out.", nowUtc, "checkout_failed")
                 : Success($"Check-out thành công ({actualHours} giờ)!", nowUtc, actualHours);
@@ -480,6 +546,28 @@ public sealed class PostgresShiftAttendanceRepository(
 
         if (action == "CHECK_IN")
         {
+            const string checkApprovedLeaveSql = """
+                SELECT 1 FROM public.don_nghi_phep_ca dnpc
+                JOIN public.don_nghi_phep dnp ON dnp.id = dnpc.id_don_nghi_phep
+                WHERE dnpc.id_dang_ky_ca = @assignmentId AND dnp.trang_thai = 'Approved'
+                UNION
+                SELECT 1 FROM public.don_nghi_phep_khoang dnpk
+                JOIN public.don_nghi_phep dnp ON dnp.id = dnpk.id_don_nghi_phep
+                WHERE dnp.id_nhan_vien = @employeeId AND dnp.trang_thai = 'Approved'
+                  AND dnpk.gio_bat_dau_utc <= @nowUtc AND @nowUtc < dnpk.gio_ket_thuc_utc
+                LIMIT 1;
+                """;
+            await using (var checkLeaveCmd = new NpgsqlCommand(checkApprovedLeaveSql, connection))
+            {
+                checkLeaveCmd.Parameters.AddWithValue("assignmentId", shiftAssignmentId);
+                checkLeaveCmd.Parameters.AddWithValue("employeeId", employeeId);
+                checkLeaveCmd.Parameters.AddWithValue("nowUtc", nowUtc);
+                if (await checkLeaveCmd.ExecuteScalarAsync(cancellationToken) is not null)
+                {
+                    return new SubmitAttendanceResult(false, "Bạn đã được duyệt nghỉ phép trong thời gian này. Không thể check-in.", shiftName, nowUtc, null, "approved_leave_conflict");
+                }
+            }
+
             if (checkInAt is not null)
             {
                 return new SubmitAttendanceResult(false, "Ca này đã được check-in.", shiftName, checkInAt.Value, null, "already_checked_in");
@@ -541,7 +629,11 @@ public sealed class PostgresShiftAttendanceRepository(
                     UPDATE public.cham_cong
                     SET gio_ra = @nowUtc,
                         so_gio_thuc_te = @hours,
-                        trang_thai = 'Completed',
+                        trang_thai = CASE WHEN EXISTS (
+                            SELECT 1 FROM public.don_nghi_phep_khoang k JOIN public.don_nghi_phep d ON d.id=k.id_don_nghi_phep
+                            WHERE d.id_nhan_vien=cham_cong.id_nhan_vien AND d.trang_thai='Approved'
+                              AND cham_cong.gio_vao < k.gio_ket_thuc_utc AND k.gio_bat_dau_utc < @nowUtc
+                        ) THEN 'NeedsReview' ELSE 'Completed' END,
                         updated_at = @nowUtc
                     WHERE id_dang_ky_ca = @assignmentId AND gio_ra IS NULL
                     RETURNING id

@@ -376,7 +376,7 @@ flutter run
    - Hỗ trợ lưu trữ lịch sử chấm công offline và đồng bộ tự động khi có kết nối mạng.
 2. **Phân hệ Backend & Web Admin (.NET 10)**:
    - Module Báo cáo tổng hợp: Xuất bảng công, tổng giờ làm thực tế ra file Excel/PDF phục vụ tính lương.
-   - Xây dựng quy trình phê duyệt đơn xin nghỉ phép, xin đi muộn và đổi ca trực tuyến cho Quản lý cửa hàng.
+   - Nghỉ phép theo ca/ngày/nhiều ngày: API và web Admin tại `/LeaveRequests`, mobile tại Cá nhân → Đơn nghỉ phép. Xem [hợp đồng API, ràng buộc và kiểm thử](leave-request-api.md). Xin đi muộn và đổi ca vẫn thuộc lộ trình tiếp theo.
    - Tích hợp kết nối WebSocket / SignalR để Dashboard Admin cập nhật trạng thái ra/vào của nhân viên theo thời gian thực (Real-time).
 
 ---

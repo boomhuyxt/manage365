@@ -21,57 +21,16 @@
     <!-- QR Code Generator Library -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="stylesheet" href="~/css/retail365.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/app-header.css" asp-append-version="true" />
   </head>
   <body class="bg-light-cream min-vh-100 pb-4">
     <!-- TOP NAVIGATION BAR -->
-    <nav class="navbar navbar-expand-lg bg-white border-bottom px-4 py-2 mb-3 sticky-top shadow-sm">
-      <div class="container-fluid">
-        <a
-          class="navbar-brand d-flex align-items-center gap-2 fw-bold"
-          href="/"
-        >
-          <div
-            class="brand-icon bg-orange text-white rounded-3 d-flex align-items-center justify-content-center"
-            style="width: 34px; height: 34px"
-          >
-            <i class="fa-solid fa-store fs-6"></i>
-          </div>
-          <span class="fs-6 text-dark"
-            >Retail365
-            <span
-              class="badge bg-warning-subtle text-warning-orange border extra-small ms-1"
-              >Chi Nhánh Q1 - 2104</span
-            ></span
-          >
-        </a>
-
-        <div class="d-flex align-items-center gap-3">
-          <ul
-            class="navbar-nav d-none d-md-flex flex-row gap-3 extra-small fw-semibold"
-          >
-            <li class="nav-item">
-              <a class="nav-link text-warning-orange active fw-bold" href="/"
-                ><i class="fa-solid fa-qrcode me-1"></i> Màn Hình Điểm Danh QR</a
-              >
-            </li>
-            <li class="nav-item">
-              <a class="nav-link text-secondary" href="/Schedule"
-                ><i class="fa-solid fa-calendar-days me-1"></i> Bảng Phân Ca & Nhân Sự</a
-              >
-            </li>
-            <li class="nav-item">
-              <a class="nav-link text-muted" href="/Account/Login"
-                ><i class="fa-solid fa-arrow-right-from-bracket me-1"></i> Đăng Xuất / Đổi TK</a
-              >
-            </li>
-          </ul>
-          <div class="d-flex align-items-center gap-2 border-start ps-3">
-            <span
-              id="userRoleBadge"
-              class="badge bg-secondary-subtle text-secondary extra-small px-2 py-1 rounded-pill"
-            >Đang tải vai trò...</span>
-          </div>
-        </div>
+        <nav class="app-header" aria-label="Điều hướng chính">
+      <a class="app-brand" href="/" aria-label="Retail365 - trang chấm công"><span class="app-brand-mark">R</span><span>Retail365</span><span class="app-branch">Chi nhánh Q1 - 2104</span></a>
+      <div class="app-header-right">
+        <div class="app-nav-links"><a class="is-current" data-page="qr" href="/"><i class="fa-solid fa-qrcode"></i> Điểm danh QR</a><a data-page="schedule" href="/Schedule"><i class="fa-solid fa-calendar-days"></i> Phân ca &amp; nhân sự</a><a data-page="leave" href="/LeaveRequests"><i class="fa-solid fa-calendar-check"></i> Duyệt nghỉ phép</a></div>
+        <div class="app-account" aria-label="Tài khoản đang đăng nhập"><span id="accountAvatar" class="app-account-avatar" aria-hidden="true">…</span><span class="app-account-copy"><span id="accountName" class="app-account-name">Đang tải tài khoản…</span><span id="accountRole" class="app-account-role">Đang xác thực</span></span></div>
+        <button id="logoutButton" type="button" class="app-logout"><i class="fa-solid fa-arrow-right-from-bracket"></i> Đăng xuất</button>
       </div>
     </nav>
 
@@ -452,6 +411,7 @@
 
     <!-- Bootstrap 5 JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/app-header.js" asp-append-version="true"></script>
     <script src="~/js/dashboard.js" asp-append-version="true"></script>
   </body>
 </html>

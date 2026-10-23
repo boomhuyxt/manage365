@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using manage365.Repositories.Attendance;
+using manage365.Routes.API.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -9,7 +10,8 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace manage365.Routes.API.Attendance;
 
 [ApiController]
-[Authorize]
+[Tags("Attendance")]
+[Authorize(Roles = AppRoles.Managers)]
 [Route("api/attendance-locations")]
 public sealed partial class AttendanceLocationAdminController(
     IAttendanceLocationRepository locationRepository,

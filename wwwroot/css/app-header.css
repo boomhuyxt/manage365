@@ -1,0 +1,61 @@
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 1030;
+  display: flex;
+  min-height: 74px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 10px clamp(18px, 3vw, 46px);
+  border-bottom: 1px solid #e8e7e4;
+  background: rgba(255, 255, 255, .97);
+  box-shadow: 0 2px 8px rgba(26, 31, 36, .045);
+}
+
+.app-brand, .app-header-right, .app-nav-links, .app-account { display: flex; align-items: center; }
+.app-brand { flex: 0 0 auto; gap: 10px; color: #22272b; font-size: 18px; font-weight: 800; letter-spacing: -.035em; text-decoration: none; }
+.app-brand:hover { color: #22272b; }
+.app-brand-mark { display: grid; width: 42px; height: 42px; place-items: center; border-radius: 12px; background: #ff7800; color: #fff; font-size: 18px; }
+.app-branch { margin-left: 2px; padding: 5px 9px; border: 1px solid #f0dfb6; border-radius: 8px; background: #fff7df; color: #a66a06; font-size: 11px; font-weight: 700; letter-spacing: 0; }
+.app-header-right { min-width: 0; justify-content: flex-end; gap: 18px; }
+.app-nav-links { gap: 4px; }
+.app-nav-links a { padding: 10px 12px; border-radius: 9px; color: #646a70; font-size: 13px; font-weight: 600; text-decoration: none; white-space: nowrap; transition: background .15s ease, color .15s ease; }
+.app-nav-links a:hover { background: #f7f5f1; color: #343a40; }
+.app-nav-links a.is-current { background: #fff3e6; color: #db6900; font-weight: 800; }
+.app-nav-links a i { margin-right: 6px; font-size: 12px; }
+.app-account { max-width: 290px; min-height: 54px; flex-direction: row; align-items: center; justify-content: flex-start; gap: 10px; padding: 6px 12px 6px 7px; border: 1px solid #f0d8bb; border-radius: 13px; background: #fff9f1; }
+.app-account-avatar { display: grid; width: 40px; height: 40px; flex: 0 0 40px; place-items: center; border: 1px solid #ffd7a6; border-radius: 11px; background: #ffead0; color: #a64d00; font-size: 14px; font-weight: 900; letter-spacing: -.04em; }
+.app-account-copy { display: flex; min-width: 0; flex-direction: column; align-items: flex-start; gap: 4px; }
+.app-account-name { max-width: 205px; overflow: hidden; color: #242a30; font-size: 15px; font-weight: 900; letter-spacing: -.02em; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
+.app-account-role { padding: 4px 9px; border: 1px solid #d9e0e4; border-radius: 999px; background: #f1f4f5; color: #59636c; font-size: 10px; font-weight: 800; line-height: 1.2; }
+.app-account-role.is-owner { padding: 5px 11px; border-color: #dc6500; background: #f47700; box-shadow: 0 3px 9px rgba(224, 102, 0, .24); color: #fff; font-size: 11px; letter-spacing: .035em; text-transform: uppercase; }
+.app-account-role.is-owner::before { content: "✦"; margin-right: 5px; color: #ffe5a8; font-size: 12px; }
+.app-logout { min-height: 36px; padding: 7px 11px; border: 1px solid #d8dadd; border-radius: 8px; background: #fff; color: #586068; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.app-logout:hover { border-color: #cbd0d3; background: #f7f8f8; color: #30363b; }
+
+@media (max-width: 1100px) {
+  .app-header { align-items: flex-start; flex-wrap: wrap; gap: 8px 18px; }
+  .app-header-right { flex: 1 1 600px; justify-content: space-between; }
+  .app-nav-links a { padding-inline: 8px; }
+}
+
+@media (max-width: 760px) {
+  .app-header { position: relative; padding: 10px 16px; }
+  .app-header-right { flex: 1 1 100%; flex-wrap: wrap; gap: 8px 12px; }
+  .app-nav-links { order: 1; width: 100%; overflow-x: auto; }
+  .app-nav-links a { padding: 9px 8px; font-size: 12px; }
+  .app-account { order: 2; max-width: calc(100% - 110px); min-height: 48px; }
+  .app-account-avatar { width: 36px; height: 36px; flex-basis: 36px; }
+  .app-account-name { max-width: 100%; font-size: 14px; }
+  .app-logout { order: 3; margin-left: auto; }
+  .app-branch { font-size: 10px; }
+}
+
+@media (max-width: 430px) {
+  .app-brand { gap: 7px; font-size: 16px; }
+  .app-brand-mark { width: 36px; height: 36px; border-radius: 10px; font-size: 15px; }
+  .app-branch { padding: 4px 6px; }
+  .app-nav-links a { padding-inline: 6px; font-size: 11px; }
+  .app-nav-links a i { display: none; }
+}

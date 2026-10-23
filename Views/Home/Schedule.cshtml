@@ -10,12 +10,17 @@
     <title>@ViewData["Title"]</title>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/retail365.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/app-header.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/schedule.css" asp-append-version="true" />
 </head>
 <body>
-    <nav class="schedule-nav no-print" aria-label="Điều hướng chính">
-        <a class="brand" href="/">▣ Retail365</a>
-        <div><a href="/">Điểm danh QR</a><a href="/Schedule" aria-current="page">Phân ca &amp; nhân sự</a><span id="currentRole"></span><button id="logoutButton" class="btn btn-sm btn-outline-secondary">Đăng xuất</button></div>
+        <nav class="app-header no-print" aria-label="Điều hướng chính">
+      <a class="app-brand" href="/" aria-label="Retail365 - trang chấm công"><span class="app-brand-mark">R</span><span>Retail365</span><span class="app-branch">Chi nhánh Q1 - 2104</span></a>
+      <div class="app-header-right">
+        <div class="app-nav-links"><a data-page="qr" href="/">Điểm danh QR</a><a data-page="schedule" href="/Schedule">Phân ca &amp; nhân sự</a><a data-page="leave" href="/LeaveRequests">Duyệt nghỉ phép</a></div>
+        <div class="app-account" aria-label="Tài khoản đang đăng nhập"><span id="accountAvatar" class="app-account-avatar" aria-hidden="true">…</span><span class="app-account-copy"><span id="accountName" class="app-account-name">Đang tải tài khoản…</span><span id="accountRole" class="app-account-role">Đang xác thực</span></span></div>
+        <button id="logoutButton" type="button" class="app-logout">Đăng xuất</button>
+      </div>
     </nav>
     <main class="schedule-page">
         <header class="schedule-header">
@@ -88,6 +93,7 @@
         <div class="modal-footer"><button id="copySubmit" class="btn btn-orange" type="submit">Sao chép</button></div></form>
     </div></div></div>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/app-header.js" asp-append-version="true"></script>
     <script src="~/js/schedule.js" asp-append-version="true"></script>
 </body>
 </html>

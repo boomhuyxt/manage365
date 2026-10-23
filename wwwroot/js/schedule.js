@@ -99,7 +99,8 @@
           const badge = node(state.manager ? "button" : "div", null, "shift-cell");
           badge.style.setProperty("--shift-color", color(a.color)); badge.dataset.assignmentId = a.assignmentId;
           badge.append(node("strong", a.shiftName), node("small", `${a.startTime} – ${a.endTime}${a.isOvernight ? " (+1 ngày)" : ""}`));
-          if (a.attendance) badge.append(node("small", a.attendance.checkOutAt ? "Đã hoàn thành" : "Đã chấm công"));
+          if (a.isOnLeave) badge.append(node("small", "🌴 Nghỉ phép", "text-danger fw-bold"));
+          else if (a.attendance) badge.append(node("small", a.attendance.checkOutAt ? "Đã hoàn thành" : "Đã chấm công"));
           if (a.note) badge.append(node("small", a.note));
           if (state.manager) { badge.type = "button"; badge.addEventListener("click", () => openShift(employee.id, date, a)); }
           cell.append(badge);
@@ -271,7 +272,6 @@
   $("nextWeek").addEventListener("click", () => { state.week = addDays(state.week, 7); load(); });
   $("todayButton").addEventListener("click", () => { state.week = monday(today()); load(); });
   $("refreshButton").addEventListener("click", load); $("printButton").addEventListener("click", () => window.print());
-  $("logoutButton").addEventListener("click", () => { clearSession(); location.assign("/Account/Login"); });
   let copyBusy = false, sourceWeek;
   $("copyWeekButton").addEventListener("click", () => { sourceWeek = state.week; $("copySource").textContent = `Tuần nguồn: ${dateLabel(sourceWeek)} – ${dateLabel(addDays(sourceWeek, 6))}`; $("copyTarget").value = addDays(sourceWeek, 7); $("copySubmit").disabled = false; message("copyMessage", ""); copyModal.show(); });
   $("copyModal").addEventListener("hide.bs.modal", event => { if (copyBusy) event.preventDefault(); });
@@ -294,7 +294,6 @@
     if (!token()) { location.replace("/Account/Login"); return; }
     try {
       state.user = await api("/api/auth/me"); state.manager = ["Admin", "Manager"].includes(state.user.role);
-      $("currentRole").textContent = { Admin: "Quản trị viên", Manager: "Quản lý", Employee: "Nhân viên" }[state.user.role] || state.user.role;
       document.querySelectorAll(".manager-only").forEach(el => el.classList.toggle("d-none", !state.manager));
       await load();
     } catch (error) { message("pageMessage", error.message); $("loadingState").textContent = "Không xác thực được phiên đăng nhập."; }

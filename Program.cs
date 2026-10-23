@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using System.Threading.RateLimiting;
 using manage365.Configuration;
 using manage365.Repositories.Attendance;
@@ -8,12 +9,18 @@ using manage365.Routes.API.Auth;
 using manage365.Routes.API.Auth.PasswordReset;
 using manage365.Routes.API.Health;
 using manage365.Repositories.Departments;
+using manage365.Repositories.LeaveRequests;
+using manage365.Repositories.Notifications;
+using manage365.Repositories.Reporting;
 using manage365.Repositories.Permissions;
 using manage365.Repositories.Roles;
 using manage365.Repositories.Shifts;
 using manage365.Repositories.Users;
+using manage365.Routes.API.LeaveRequests;
+using manage365.Routes.API.Errors;
 using manage365.Routes.API.Shifts;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using Npgsql;
@@ -38,6 +45,23 @@ if (envFilePath != null)
 
 // Add services to the container.
 builder.Services.AddControllersWithViews();
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var problem = new ValidationProblemDetails(context.ModelState)
+        {
+            Status = StatusCodes.Status400BadRequest,
+            Title = "Dữ liệu gửi lên không hợp lệ.",
+            Instance = context.HttpContext.Request.Path
+        };
+        problem.Extensions["code"] = "validation_error";
+        problem.Extensions["traceId"] = context.HttpContext.TraceIdentifier;
+        return new BadRequestObjectResult(problem);
+    };
+});
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<ApiExceptionHandler>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<IAddressGeocodingService, NominatimGeocodingService>(client =>
@@ -83,13 +107,17 @@ builder.Services.AddSwaggerGen(c =>
     }
 });
 
+var allowedCorsOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>() ?? [];
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll", policy =>
+    options.AddPolicy("ConfiguredOrigins", policy =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        if (allowedCorsOrigins.Length > 0)
+        {
+            policy.WithOrigins(allowedCorsOrigins)
+                  .AllowAnyMethod()
+                  .AllowAnyHeader();
+        }
     });
 });
 
@@ -209,10 +237,38 @@ builder.Services.AddScoped<IAttendanceLocationRepository, PostgresAttendanceLoca
 builder.Services.AddScoped<IAttendanceGeofenceService, AttendanceGeofenceService>();
 builder.Services.AddScoped<IShiftAttendanceRepository, PostgresShiftAttendanceRepository>();
 builder.Services.AddScoped<IShiftSchedulingRepository, PostgresShiftSchedulingRepository>();
+builder.Services.AddScoped<ILeaveRequestRepository, PostgresLeaveRequestRepository>();
+builder.Services.AddScoped<INotificationRepository, PostgresNotificationRepository>();
+builder.Services.AddScoped<IReportingRepository, PostgresReportingRepository>();
 
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.OnRejected = async (context, cancellationToken) =>
+    {
+        var retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retry)
+            ? Math.Max(1, (int)Math.Ceiling(retry.TotalSeconds))
+            : 60;
+        context.HttpContext.Response.Headers.RetryAfter = retryAfter.ToString();
+        context.HttpContext.Response.ContentType = "application/problem+json";
+        await JsonSerializer.SerializeAsync(context.HttpContext.Response.Body, new
+        {
+            status = StatusCodes.Status429TooManyRequests,
+            title = "Đã vượt quá số yêu cầu cho phép. Vui lòng thử lại sau.",
+            code = "rate_limit_exceeded",
+            traceId = context.HttpContext.TraceIdentifier
+        }, cancellationToken: cancellationToken);
+    };
+    options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = 300,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
     options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions
@@ -249,13 +305,29 @@ builder.Services.AddRateLimiter(options =>
             QueueLimit = 0,
             AutoReplenishment = true
         }));
+    options.AddPolicy("reporting", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
+            ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 60,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
 });
 
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
 var enableSwagger = app.Environment.IsDevelopment() ||
-                    app.Configuration.GetValue<bool>("EnableSwagger", true);
+                    app.Configuration.GetValue<bool>("EnableSwagger", false);
+
+app.UseExceptionHandler();
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
 
 if (enableSwagger)
 {
@@ -266,18 +338,12 @@ if (enableSwagger)
         c.RoutePrefix = "swagger";
     });
 }
-else
-{
-    app.UseExceptionHandler("/Home/Error");
-    app.UseHsts();
-}
-
-app.UseCors("AllowAll");
+app.UseCors("ConfiguredOrigins");
 app.UseHttpsRedirection();
 app.UseRouting();
 
-app.UseRateLimiter();
 app.UseAuthentication();
+app.UseRateLimiter();
 app.UseAuthorization();
 
 app.MapStaticAssets();
@@ -300,6 +366,12 @@ try
 
     var shiftRepo = startupScope.ServiceProvider.GetRequiredService<IShiftSchedulingRepository>();
     await shiftRepo.EnsureTablesAndSeedAsync();
+
+    var leaveRepo = startupScope.ServiceProvider.GetRequiredService<ILeaveRequestRepository>();
+    await leaveRepo.EnsureTablesAsync();
+
+    var notificationRepo = startupScope.ServiceProvider.GetRequiredService<INotificationRepository>();
+    await notificationRepo.EnsureTablesAsync();
 }
 catch (Exception ex)
 {

@@ -1,0 +1,225 @@
+@{
+    Layout = null;
+    ViewData["Title"] = "Retail365 - Duyệt nghỉ phép";
+}
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/retail365.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/app-header.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/schedule.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/leave-requests.css" asp-append-version="true" />
+</head>
+<body class="leave-page">
+        <nav class="app-header no-print" aria-label="Điều hướng chính">
+      <a class="app-brand" href="/" aria-label="Retail365 - trang chấm công"><span class="app-brand-mark">R</span><span>Retail365</span><span class="app-branch">Chi nhánh Q1 - 2104</span></a>
+      <div class="app-header-right">
+        <div class="app-nav-links"><a data-page="qr" href="/">Điểm danh QR</a><a data-page="schedule" href="/Schedule">Phân ca &amp; nhân sự</a><a data-page="leave" href="/LeaveRequests">Duyệt nghỉ phép</a></div>
+        <div class="app-account" aria-label="Tài khoản đang đăng nhập"><span id="accountAvatar" class="app-account-avatar" aria-hidden="true">…</span><span class="app-account-copy"><span id="accountName" class="app-account-name">Đang tải tài khoản…</span><span id="accountRole" class="app-account-role">Đang xác thực</span></span></div>
+        <button id="logoutButton" type="button" class="app-logout">Đăng xuất</button>
+      </div>
+    </nav>
+
+    <main class="schedule-page leave-page-content">
+        <header class="leave-header">
+            <div>
+                <p class="eyebrow">NHÂN SỰ / ĐƠN NGHỈ PHÉP</p>
+                <h1>Duyệt đơn nghỉ phép</h1>
+                <p class="leave-subtitle">Kiểm tra ca bị ảnh hưởng, phân loại lương và ghi nhận quyết định duyệt.</p>
+            </div>
+            <div class="leave-header-actions no-print">
+                <button id="payrollSummaryBtn" class="btn btn-outline-secondary">Đối soát lương</button>
+                <button id="refreshButton" class="btn btn-orange"><span aria-hidden="true">↻</span> Làm mới</button>
+            </div>
+        </header>
+
+        <div id="pageMessage" class="alert d-none" role="status" aria-live="polite"></div>
+
+        <section class="leave-stats" aria-label="Tổng quan danh sách hiện tại">
+            <article class="leave-stat leave-stat-pending"><span>Chờ duyệt</span><strong id="statPending">—</strong><small>Trong trang đang xem</small></article>
+            <article><span>Đã duyệt</span><strong id="statApproved">—</strong><small>Trong trang đang xem</small></article>
+            <article><span>Từ chối / Thu hồi</span><strong id="statOther">—</strong><small>Trong trang đang xem</small></article>
+            <article><span>Đơn trên trang</span><strong id="statTotal">—</strong><small>Theo bộ lọc hiện tại</small></article>
+        </section>
+
+        <section class="leave-filter-panel no-print" aria-label="Bộ lọc đơn nghỉ phép">
+            <div class="leave-filter-heading">
+                <div><h2>Lọc danh sách</h2><p>Thu hẹp hàng đợi theo trạng thái, loại nghỉ hoặc thời gian.</p></div>
+                <button id="applyFilterBtn" class="btn btn-outline-secondary">Áp dụng bộ lọc</button>
+            </div>
+            <div class="leave-filter-grid">
+                <div class="leave-filter-field"><label for="statusFilter">Trạng thái</label><select id="statusFilter" class="form-select"><option value="">Tất cả trạng thái</option><option value="Pending">Chờ duyệt</option><option value="Approved">Đã duyệt</option><option value="Rejected">Đã từ chối</option><option value="Cancelled">Đã hủy</option><option value="Revoked">Đã thu hồi</option></select></div>
+                <div class="leave-filter-field"><label for="unitFilter">Đơn vị nghỉ</label><select id="unitFilter" class="form-select"><option value="">Tất cả đơn vị</option><option value="Shift">Theo ca</option><option value="Day">Một ngày</option><option value="DateRange">Nhiều ngày</option></select></div>
+                <div class="leave-filter-field"><label for="reasonFilter">Lý do</label><select id="reasonFilter" class="form-select"><option value="">Tất cả lý do</option><option value="Personal">Việc cá nhân</option><option value="FamilyEmergency">Việc gia đình đột xuất</option><option value="Sickness">Ốm đau / Khám bệnh</option><option value="Maternity">Thai sản</option><option value="Other">Lý do khác</option></select></div>
+                <div class="leave-filter-field"><label for="fromDateFilter">Từ ngày</label><input id="fromDateFilter" type="date" class="form-control" /></div>
+                <div class="leave-filter-field"><label for="toDateFilter">Đến ngày</label><input id="toDateFilter" type="date" class="form-control" /></div>
+            </div>
+        </section>
+
+        <section class="leave-queue" aria-label="Danh sách đơn nghỉ phép">
+            <div class="leave-queue-heading">
+                <div><h2>Hàng đợi đơn</h2><p id="pageInfo" aria-live="polite">Đang chuẩn bị tải dữ liệu</p></div>
+                <span id="apiConnectionStatus" class="leave-api-indicator" role="status" aria-live="polite"><i></i> Đang kết nối API</span>
+            </div>
+            <div id="loadingState" class="leave-loading" role="status"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Đang tải danh sách đơn…</div>
+            <div id="leaveRequestsTableBody" class="leave-request-list"></div>
+            <div id="emptyState" class="leave-empty d-none"><span class="leave-empty-mark" aria-hidden="true">✓</span><strong>Không có đơn phù hợp</strong><p>Thử thay đổi bộ lọc hoặc tải lại danh sách.</p></div>
+            <div class="leave-pagination no-print">
+                <button id="previousPage" class="btn btn-outline-secondary">Đơn trước</button>
+                <button id="nextPage" class="btn btn-outline-secondary">Đơn tiếp</button>
+            </div>
+        </section>
+    </main>
+    <div class="modal fade" id="detailModal" tabindex="-1" aria-labelledby="detailTitle" aria-hidden="true">
+        <div class="modal-dialog modal-lg"><div class="modal-content">
+            <div class="modal-header"><h2 class="fs-5" id="detailTitle">Chi tiết đơn nghỉ phép</h2><button class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
+            <div class="modal-body" id="detailContent"></div>
+        </div></div>
+    </div>
+    <div class="modal fade" id="reviewModal" tabindex="-1" aria-labelledby="reviewModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title fs-5" id="reviewModalTitle">Xét duyệt đơn nghỉ phép</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="modalAlert" class="alert d-none" role="alert"></div>
+
+                    <div class="border rounded p-3 mb-3 bg-light">
+                        <div class="row g-2">
+                            <div class="col-md-6"><strong>Nhân viên:</strong> <span id="mEmployeeName"></span> (<span id="mEmployeeCode"></span>)</div>
+                            <div class="col-md-6"><strong>Đơn vị:</strong> <span id="mUnit"></span></div>
+                            <div class="col-12"><strong>Khoảng xin nghỉ:</strong> <span id="mPeriod" class="text-primary fw-bold"></span></div>
+                            <div class="col-12"><strong>Lý do giải trình:</strong> <span id="mReason"></span></div>
+                            <div class="col-md-6" id="lateSubmissionWrap"><strong>Nộp muộn:</strong> <span id="mLateReason" class="text-danger"></span></div>
+                        </div>
+                    </div>
+
+                    <h6 class="fw-bold mt-3">Phạm vi thời gian thực tế &amp; Ca ảnh hưởng:</h6>
+                    <div id="mEffectiveIntervals" class="mb-2 small text-secondary"></div>
+                    <div id="mAffectedAssignments" class="mb-3"></div>
+
+                    <div id="mWarningsBox" class="alert alert-warning d-none" role="alert"></div>
+
+                    <form id="approvalForm">
+                        <input type="hidden" id="mLeaveRequestId" />
+                        <input type="hidden" id="mPreviewToken" />
+                        <input type="hidden" id="mVersion" />
+
+                        <div class="mb-3">
+                            <label for="mPayrollTreatment" class="form-label fw-bold">Phương án phân loại lương (*):</label>
+                            <select id="mPayrollTreatment" class="form-select" required>
+                                <option value="PaidLeave">Nghỉ hưởng lương (PaidLeave)</option>
+                                <option value="UnpaidLeave">Nghỉ không lương (UnpaidLeave)</option>
+                                <option value="ExternalBenefitReview">Chế độ riêng / Bảo hiểm xét duyệt (ExternalBenefitReview)</option>
+                                <option value="Unresolved" selected>Chưa phân loại (Unresolved)</option>
+                            </select>
+                            <small class="text-muted">Phân loại do Admin xác nhận, chưa tự trừ tiền hay chốt sổ phép.</small>
+                        </div>
+
+                        <div class="form-check mb-2 d-none" id="mLongLeaveCheckWrap">
+                            <input class="form-check-input" type="checkbox" id="mLongLeaveAck" />
+                            <label class="form-check-label text-danger fw-bold" for="mLongLeaveAck">
+                                Xác nhận xem xét nghỉ dài hạn (> 30 ngày)
+                            </label>
+                        </div>
+
+                        <div class="form-check mb-2 d-none" id="mExpandedCoverageCheckWrap">
+                            <input class="form-check-input" type="checkbox" id="mExpandedCoverageAck" />
+                            <label class="form-check-label text-warning-emphasis fw-bold" for="mExpandedCoverageAck">
+                                Xác nhận mở rộng phạm vi nghỉ cho các ca qua đêm liên quan
+                            </label>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="mReviewNote" class="form-label fw-bold">Ghi chú xét duyệt / Căn cứ chấp nhận:</label>
+                            <textarea id="mReviewNote" class="form-control" rows="2" maxlength="2000" placeholder="Bắt buộc nếu đơn nộp muộn hoặc nghỉ dài hạn..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger me-auto" id="btnReject">Từ chối đơn</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-success" id="btnApprove">Phê duyệt (Approve)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Thu Hồi (Revoke Modal) -->
+    <div class="modal fade" id="revokeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Thu hồi đơn nghỉ phép đã duyệt</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted small">Chỉ có thể thu hồi đơn đã duyệt TRƯỚC KHI thời gian nghỉ bắt đầu và chưa có chấm công liên quan.</p>
+                    <div class="mb-3">
+                        <label for="revokeReasonInput" class="form-label fw-bold">Lý do thu hồi (*):</label>
+                        <textarea id="revokeReasonInput" class="form-control" rows="3" required placeholder="Nhập lý do thu hồi..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="button" class="btn btn-danger" id="confirmRevokeBtn">Xác nhận thu hồi</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Đối Soát Lương (Payroll Summary Modal) -->
+    <div class="modal fade" id="payrollModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Báo cáo phân bổ phút nghỉ theo ngày phục vụ đối soát lương</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-2 align-items-center mb-3">
+                        <div class="col-auto"><label class="col-form-label fw-bold">Từ ngày:</label></div>
+                        <div class="col-auto"><input id="pFromDate" type="date" class="form-control form-control-sm" /></div>
+                        <div class="col-auto"><label class="col-form-label fw-bold">Đến ngày:</label></div>
+                        <div class="col-auto"><input id="pToDate" type="date" class="form-control form-control-sm" /></div>
+                        <div class="col-auto"><button id="btnQueryPayroll" class="btn btn-sm btn-orange">Truy vấn</button></div>
+                    </div>
+                    <div class="table-responsive" style="max-height:450px">
+                        <table class="table table-bordered table-sm small">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Ngày</th>
+                                    <th>Mã NV</th>
+                                    <th>Họ tên</th>
+                                    <th>Phòng ban</th>
+                                    <th>Loại NV</th>
+                                    <th>Đơn #</th>
+                                    <th>Đơn vị</th>
+                                    <th>Lý do</th>
+                                    <th>Phương án lương</th>
+                                    <th>Phút theo lịch</th>
+                                    <th>Cần đối soát</th>
+                                </tr>
+                            </thead>
+                            <tbody id="payrollSummaryTbody"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/app-header.js" asp-append-version="true"></script>
+    <script src="~/js/leave-requests.js" asp-append-version="true"></script>
+</body>
+</html>

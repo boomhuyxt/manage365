@@ -15,7 +15,7 @@ public sealed class ShiftSchedulingDatabaseTests
     private static async Task<NpgsqlDataSource> Database()
     {
         var cs = new NpgsqlConnectionStringBuilder(Environment.GetEnvironmentVariable("SHIFT_TEST_CONNECTION"));
-        if (cs.Host is not ("127.0.0.1" or "localhost") || cs.Database != "manage365_shift_test" || cs.Port != 55439)
+        if (cs.Host is not ("127.0.0.1" or "localhost") || cs.Database != "manage365_shift_test" || cs.Port is not (55439 or 55440))
             throw new InvalidOperationException("Integration tests require the isolated localhost:55439/manage365_shift_test database.");
         var source = NpgsqlDataSource.Create(cs.ConnectionString);
         await using var init = source.CreateCommand("""
@@ -27,6 +27,8 @@ public sealed class ShiftSchedulingDatabaseTests
         await new manage365.Repositories.Departments.PostgresDepartmentRepository(source).EnsureTablesAndSeedAsync(Ct);
         var repo = new PostgresShiftSchedulingRepository(source);
         await repo.EnsureTablesAndSeedAsync(Ct);
+        using var leaveCache = new Microsoft.Extensions.Caching.Memory.MemoryCache(new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions());
+        await new manage365.Repositories.LeaveRequests.PostgresLeaveRequestRepository(source, leaveCache).EnsureTablesAsync(Ct);
         await using var reset = source.CreateCommand("""
             CREATE TABLE IF NOT EXISTS public.cham_cong (id BIGSERIAL PRIMARY KEY, id_dang_ky_ca BIGINT UNIQUE REFERENCES public.dang_ky_ca(id),
                 id_nhan_vien BIGINT, ngay_cham_cong DATE, gio_vao TIMESTAMPTZ, gio_ra TIMESTAMPTZ, so_gio_thuc_te NUMERIC, trang_thai TEXT);

@@ -1,5 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using manage365.Repositories.Attendance;
+using manage365.Routes.API.Auth;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -7,6 +8,7 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace manage365.Routes.API.Attendance;
 
 [ApiController]
+[Tags("Attendance")]
 [Authorize]
 [Route("api/attendance")]
 public sealed class AttendanceShiftController(
@@ -120,7 +122,7 @@ public sealed class AttendanceShiftController(
         {
             var statusCode = result.ErrorCode switch
             {
-                "already_checked_in" or "duplicate_check_in" => StatusCodes.Status409Conflict,
+                "already_checked_in" or "duplicate_check_in" or "approved_leave_conflict" => StatusCodes.Status409Conflict,
                 "not_checked_in" or "already_checked_out" => StatusCodes.Status409Conflict,
                 "shift_not_found" => StatusCodes.Status404NotFound,
                 _ => StatusCodes.Status400BadRequest
@@ -165,6 +167,7 @@ public sealed class AttendanceShiftController(
     }
 
     [HttpGet("admin/snapshot")]
+    [Authorize(Roles = AppRoles.Managers)]
     [ProducesResponseType<AdminAttendanceSnapshotDto>(StatusCodes.Status200OK)]
     public async Task<ActionResult<AdminAttendanceSnapshotDto>> GetAdminSnapshot(
         [FromQuery] int limit = 50,

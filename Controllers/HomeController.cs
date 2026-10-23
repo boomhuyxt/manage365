@@ -2,31 +2,37 @@ using manage365.Models;
 using Microsoft.AspNetCore.Mvc;
 using System.Diagnostics;
 
-namespace manage365.Controllers
+namespace manage365.Controllers;
+
+public class HomeController : Controller
 {
-    public class HomeController : Controller
+    public IActionResult Index()
     {
-        public IActionResult Index()
-        {
-            return View();
-        }
+        return View();
+    }
 
-        public IActionResult Privacy()
-        {
-            return View();
-        }
+    public IActionResult Privacy()
+    {
+        return View();
+    }
 
-        [HttpGet("/Schedule")]
-        [HttpGet("/Home/Schedule")]
-        public IActionResult Schedule()
-        {
-            return View();
-        }
+    [HttpGet("/Schedule")]
+    [HttpGet("/Home/Schedule")]
+    public IActionResult Schedule()
+    {
+        return View();
+    }
 
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
-        {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
-        }
+    [HttpGet("/LeaveRequests")]
+    [HttpGet("/Home/LeaveRequests")]
+    public IActionResult LeaveRequests()
+    {
+        return View();
+    }
+
+    [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
+    public IActionResult Error()
+    {
+        return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
     }
 }
