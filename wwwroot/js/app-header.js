@@ -13,11 +13,12 @@
     catch { return null; }
   }
 
-  function roleLabel(role) {
+  function roleLabel(role, isRootAdmin) {
+    if (isRootAdmin) return "ROOT Admin";
     switch ((role || "").toLowerCase()) {
-      case "admin": return "Chủ cửa hàng";
-      case "manager": return "Quản lý";
-      case "employee": return "Nhân viên";
+      case "admin": return "Admin";
+      case "manager": return "Chủ cửa hàng";
+      case "employee": return "User";
       default: return role || "Tài khoản";
     }
   }
@@ -26,6 +27,11 @@
     const name = document.getElementById("accountName");
     const role = document.getElementById("accountRole");
     const avatar = document.getElementById("accountAvatar");
+    const shop = (user?.role || "").toLowerCase() === "manager" ? user?.shopName : null;
+    document.querySelectorAll("[data-owner-shop]").forEach(node => {
+      node.hidden = !shop;
+      node.textContent = shop || "";
+    });
     const displayName = user?.displayName || user?.email || "Tài khoản";
     if (name) name.textContent = displayName;
     if (avatar) {
@@ -33,15 +39,23 @@
       avatar.textContent = (parts.length > 1 ? `${parts[0][0]}${parts[parts.length - 1][0]}` : parts[0].slice(0, 2)).toUpperCase();
     }
     if (role) {
-      role.textContent = roleLabel(user?.role);
-      role.classList.toggle("is-owner", (user?.role || "").toLowerCase() === "admin");
+      role.textContent = roleLabel(user?.role, user?.isRootAdmin);
+      role.classList.toggle("is-owner", (user?.role || "").toLowerCase() === "manager");
+      role.classList.toggle("is-root", Boolean(user?.isRootAdmin));
     }
+    const isAdmin = (user?.role || "").toLowerCase() === "admin";
+    document.querySelectorAll(".app-nav-links a[data-page]:not([data-admin-only])").forEach(link => {
+      link.hidden = false;
+    });
+    document.querySelectorAll("[data-admin-only]").forEach(link => {
+      link.hidden = !isAdmin;
+    });
   }
 
   async function loadUser() {
     let user = parseUser();
     renderUser(user);
-    if (user || !readStored("accessToken")) return;
+    if (!readStored("accessToken")) return;
 
     try {
       const response = await fetch("/api/auth/me", {
@@ -60,7 +74,8 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     const currentPath = location.pathname.toLowerCase();
-    const currentPage = currentPath.includes("leaverequests") ? "leave"
+    const currentPage = currentPath.includes("adminusers") ? "admin"
+      : currentPath.includes("leaverequests") ? "leave"
       : currentPath.includes("schedule") ? "schedule" : "qr";
     document.querySelectorAll(".app-nav-links a[data-page]").forEach(link => {
       const active = link.dataset.page === currentPage;

@@ -124,10 +124,7 @@ public sealed class PostgresShiftAttendanceRepository(
         CancellationToken cancellationToken = default)
     {
         const string sql = """
-            SELECT (COUNT(*) OVER())::int AS total_today,
-                   (COUNT(*) FILTER (WHERE cc.gio_ra IS NULL) OVER())::int AS checked_in_count,
-                   (COUNT(*) FILTER (WHERE cc.gio_ra IS NOT NULL) OVER())::int AS completed_count,
-                   cc.id,
+            SELECT cc.id,
                    cc.id_dang_ky_ca,
                    COALESCE(cl.loai_ca, @unassignedShiftName),
                    cc.ngay_cham_cong,
@@ -175,7 +172,10 @@ public sealed class PostgresShiftAttendanceRepository(
         var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(nowUtc, timeZone).DateTime);
 
         const string sql = """
-            SELECT cc.id,
+            SELECT (COUNT(*) OVER())::int AS total_today,
+                   (COUNT(*) FILTER (WHERE cc.gio_ra IS NULL) OVER())::int AS checked_in_count,
+                   (COUNT(*) FILTER (WHERE cc.gio_ra IS NOT NULL) OVER())::int AS completed_count,
+                   cc.id,
                    cc.id_nhan_vien,
                    nv.ho_ten,
                    nv.email,
@@ -265,6 +265,66 @@ public sealed class PostgresShiftAttendanceRepository(
             CheckedIn: checkedIn,
             Completed: completed,
             Records: records);
+    }
+
+    public async Task<AdminAttendanceHistoryPageDto> GetAdminAttendanceHistoryAsync(
+        DateOnly fromDate,
+        DateOnly toDate,
+        int page = 1,
+        int pageSize = 50,
+        CancellationToken cancellationToken = default)
+    {
+        const string sql = """
+            SELECT COUNT(*) OVER()::int AS total_count,
+                   cc.id,
+                   cc.id_nhan_vien,
+                   nv.ho_ten,
+                   nv.email,
+                   COALESCE(cl.loai_ca, @unassignedShiftName),
+                   cc.ngay_cham_cong,
+                   cc.gio_vao,
+                   cc.gio_ra,
+                   cc.so_gio_thuc_te,
+                   COALESCE(cc.trang_thai, 'CheckedIn')
+            FROM public.cham_cong AS cc
+            JOIN public.nhan_vien AS nv ON nv.id = cc.id_nhan_vien
+            LEFT JOIN public.dang_ky_ca AS dkc ON dkc.id = cc.id_dang_ky_ca
+            LEFT JOIN public.ca_lam AS cl ON cl.id = dkc.id_ca_lam
+            WHERE cc.ngay_cham_cong >= @fromDate AND cc.ngay_cham_cong <= @toDate
+            ORDER BY cc.gio_vao DESC, cc.id DESC
+            LIMIT @pageSize OFFSET @offset;
+            """;
+
+        await using var command = dataSource.CreateCommand(sql);
+        command.CommandTimeout = 15;
+        command.Parameters.AddWithValue("fromDate", fromDate.ToDateTime(TimeOnly.MinValue));
+        command.Parameters.AddWithValue("toDate", toDate.ToDateTime(TimeOnly.MinValue));
+        page = Math.Clamp(page, 1, 2000);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        command.Parameters.AddWithValue("pageSize", pageSize);
+        command.Parameters.AddWithValue("offset", (page - 1) * pageSize);
+        command.Parameters.AddWithValue("unassignedShiftName", UnassignedShiftName);
+
+        var records = new List<AdminAttendanceHistoryRecordDto>();
+        var totalCount = 0;
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            totalCount = reader.GetInt32(0);
+            records.Add(new AdminAttendanceHistoryRecordDto(
+                AttendanceId: reader.GetInt64(1),
+                EmployeeId: reader.GetInt64(2),
+                EmployeeName: reader.GetString(3),
+                EmployeeEmail: reader.IsDBNull(4) ? null : reader.GetString(4),
+                ShiftName: reader.GetString(5),
+                ShiftDate: DateOnly.FromDateTime(reader.GetDateTime(6)).ToString("dd/MM/yyyy"),
+                CheckInAt: reader.GetFieldValue<DateTimeOffset>(7),
+                CheckOutAt: reader.IsDBNull(8) ? null : reader.GetFieldValue<DateTimeOffset>(8),
+                ActualHours: reader.IsDBNull(9) ? null : reader.GetDecimal(9),
+                Status: reader.GetString(10)));
+        }
+
+        return new AdminAttendanceHistoryPageDto(records, totalCount, page, pageSize);
     }
 
     private async Task<EligibleShiftDto> GetUnassignedOptionAsync(

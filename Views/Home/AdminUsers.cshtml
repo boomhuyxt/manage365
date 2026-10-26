@@ -1,0 +1,89 @@
+@{
+    Layout = null;
+    ViewData["Title"] = "Retail365 - Quản trị quyền";
+}
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"]</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/retail365.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/app-header.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/admin-users.css" asp-append-version="true" />
+</head>
+<body class="admin-users-page">
+    <nav class="app-header" aria-label="Điều hướng chính">
+        <a class="app-brand" href="/" aria-label="Retail365 - trang chủ"><span class="app-brand-mark">R</span><span>Retail365</span><span class="app-branch" data-owner-shop hidden></span></a>
+        <div class="app-header-right">
+            <div class="app-nav-links">
+                <a data-page="qr" href="/">Điểm danh QR</a>
+                <a data-page="schedule" href="/Schedule">Phân ca &amp; nhân sự</a>
+                <a data-page="leave" href="/LeaveRequests">Duyệt nghỉ phép</a>
+                <a data-page="admin" data-admin-only hidden href="/AdminUsers">Quản trị quyền</a>
+            </div>
+            <div class="app-account" aria-label="Tài khoản đang đăng nhập"><span id="accountAvatar" class="app-account-avatar" aria-hidden="true">…</span><span class="app-account-copy"><span id="accountName" class="app-account-name">Đang tải tài khoản…</span><span id="accountRole" class="app-account-role">Đang xác thực</span></span></div>
+            <button id="logoutButton" type="button" class="app-logout">Đăng xuất</button>
+        </div>
+    </nav>
+
+    <main class="admin-users-shell">
+        <header class="admin-users-heading">
+            <div>
+                <p class="admin-eyebrow">HỆ THỐNG / QUẢN TRỊ TRUY CẬP</p>
+                <h1>Quản lý quyền nhân sự</h1>
+                <p>Kiểm soát vai trò Admin, Chủ shop và User trong hệ thống Retail365.</p>
+            </div>
+            <button id="refreshUsers" type="button" class="btn btn-orange">↻ Tải lại</button>
+        </header>
+
+        <section id="rootNotice" class="root-notice" aria-live="polite">
+            <span class="root-mark" aria-hidden="true">R</span>
+            <div><strong id="rootNoticeTitle">Bảo vệ ROOT Admin</strong><p id="rootNoticeText">Đang kiểm tra cấu hình tài khoản ROOT Admin…</p></div>
+            <span class="root-lock" aria-hidden="true">ĐƯỢC BẢO VỆ</span>
+        </section>
+
+        <div id="adminPageMessage" class="admin-message" role="status" aria-live="polite" hidden></div>
+
+        <section class="admin-user-toolbar" aria-label="Lọc tài khoản">
+            <label class="admin-search"><span>Tìm tài khoản</span><input id="userSearch" type="search" placeholder="Tên hoặc email…" autocomplete="off" /></label>
+            <label class="admin-role-filter"><span>Lọc vai trò</span><select id="roleFilter"><option value="">Tất cả vai trò</option><option value="Admin">Admin</option><option value="Manager">Chủ shop</option><option value="Employee">User</option></select></label>
+            <div class="admin-result-count"><strong id="userCount">—</strong><span>tài khoản</span></div>
+        </section>
+
+        <section class="admin-table-card" aria-label="Danh sách tài khoản">
+            <div class="admin-table-heading"><div><h2>Danh sách tài khoản</h2><p>Thay đổi vai trò có hiệu lực ở lần gọi API tiếp theo.</p></div><span id="adminApiState" class="admin-api-state"><i></i> Đang kết nối</span></div>
+            <div id="adminLoading" class="admin-state"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Đang tải tài khoản…</div>
+            <div id="adminEmpty" class="admin-state" hidden>Không tìm thấy tài khoản phù hợp với bộ lọc.</div>
+            <div class="admin-table-scroll">
+                <table class="admin-user-table">
+                    <thead><tr><th>Nhân sự</th><th>Vai trò hiện tại</th><th>Trạng thái</th><th>Ngày tạo</th><th>Thao tác</th></tr></thead>
+                    <tbody id="adminUsersBody"></tbody>
+                </table>
+            </div>
+            <footer class="admin-pagination"><span id="adminPageInfo">Trang 1</span><div><button id="previousUsers" type="button" class="btn btn-outline-secondary" disabled>Trước</button><button id="nextUsers" type="button" class="btn btn-outline-secondary" disabled>Tiếp</button></div></footer>
+        </section>
+        <p class="admin-footnote">Mọi thay đổi quyền được máy chủ kiểm tra lại. Admin thường chỉ được nâng User lên Chủ shop; ROOT Admin có thể gán mọi vai trò và hạ cấp Admin.</p>
+    </main>
+
+    <div id="roleDialog" class="role-dialog-backdrop" hidden>
+        <section class="role-dialog" role="dialog" aria-modal="true" aria-labelledby="roleDialogTitle">
+            <button id="closeRoleDialog" class="role-dialog-close" type="button" aria-label="Đóng">×</button>
+            <span class="role-dialog-kicker">CẬP NHẬT TRUY CẬP</span>
+            <h2 id="roleDialogTitle">Thay đổi vai trò</h2>
+            <p id="roleTargetName" class="role-target-name"></p>
+            <label for="newRole">Vai trò mới</label>
+            <select id="newRole" class="form-select"><option value="Admin">Admin</option><option value="Manager">Chủ shop</option><option value="Employee">User</option></select>
+            <label id="shopNameField" for="shopNameInput" hidden>Tên shop</label>
+            <input id="shopNameInput" class="form-control" type="text" maxlength="200" placeholder="Ví dụ: Retail365 - Chi nhánh Q1" hidden />
+            <p id="roleDialogHint" class="role-dialog-hint"></p>
+            <div class="role-dialog-actions"><button id="cancelRoleChange" type="button" class="btn btn-outline-secondary">Hủy</button><button id="saveRoleChange" type="button" class="btn btn-orange">Lưu thay đổi</button></div>
+        </section>
+    </div>
+
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/app-header.js" asp-append-version="true"></script>
+    <script src="~/js/admin-users.js" asp-append-version="true"></script>
+</body>
+</html>

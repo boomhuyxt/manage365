@@ -63,7 +63,7 @@ public sealed class PostgresUserManagementRepository(NpgsqlDataSource dataSource
         var selectSql = $"""
             SELECT nv.id, nv.email, nv.ho_ten, COALESCE(vt.ten_vai_tro, 'Employee'),
                    nv.loai_nhan_vien, nv.luong_co_ban_gio, COALESCE(nv.trang_thai, 'Active'),
-                   nv.created_at, nv.updated_at
+                   nv.created_at, nv.updated_at, nv.ten_cua_hang
             FROM public.nhan_vien AS nv
             LEFT JOIN public.vai_tro AS vt ON vt.id = nv.id_vai_tro
             {whereSql}
@@ -92,7 +92,8 @@ public sealed class PostgresUserManagementRepository(NpgsqlDataSource dataSource
                 reader.GetDecimal(5),
                 reader.IsDBNull(6) ? "Active" : reader.GetString(6),
                 reader.GetFieldValue<DateTimeOffset>(7),
-                reader.GetFieldValue<DateTimeOffset>(8)));
+                reader.GetFieldValue<DateTimeOffset>(8),
+                reader.IsDBNull(9) ? null : reader.GetString(9)));
         }
 
         return new PagedUserResult<UserManagementItem>(items, page, pageSize, totalCount, totalPages);
@@ -103,7 +104,8 @@ public sealed class PostgresUserManagementRepository(NpgsqlDataSource dataSource
         const string sql = """
             SELECT nv.id, nv.email, nv.ho_ten, COALESCE(vt.ten_vai_tro, 'Employee'),
                    nv.loai_nhan_vien, nv.luong_co_ban_gio, nv.ma_so_thue, nv.so_nguoi_phu_thuoc,
-                   COALESCE(nv.trang_thai, 'Active'), nv.diem_danh_gia, nv.created_at, nv.updated_at
+                   COALESCE(nv.trang_thai, 'Active'), nv.diem_danh_gia, nv.created_at, nv.updated_at,
+                   nv.ten_cua_hang
             FROM public.nhan_vien AS nv
             LEFT JOIN public.vai_tro AS vt ON vt.id = nv.id_vai_tro
             WHERE nv.id = @id
@@ -122,7 +124,8 @@ public sealed class PostgresUserManagementRepository(NpgsqlDataSource dataSource
         const string sql = """
             SELECT nv.id, nv.email, nv.ho_ten, COALESCE(vt.ten_vai_tro, 'Employee'),
                    nv.loai_nhan_vien, nv.luong_co_ban_gio, nv.ma_so_thue, nv.so_nguoi_phu_thuoc,
-                   COALESCE(nv.trang_thai, 'Active'), nv.diem_danh_gia, nv.created_at, nv.updated_at
+                   COALESCE(nv.trang_thai, 'Active'), nv.diem_danh_gia, nv.created_at, nv.updated_at,
+                   nv.ten_cua_hang
             FROM public.nhan_vien AS nv
             LEFT JOIN public.vai_tro AS vt ON vt.id = nv.id_vai_tro
             WHERE LOWER(nv.email) = LOWER(@email)
@@ -147,9 +150,9 @@ public sealed class PostgresUserManagementRepository(NpgsqlDataSource dataSource
             )
             INSERT INTO public.nhan_vien
                 (id, id_vai_tro, ho_ten, email, mat_khau, loai_nhan_vien, luong_co_ban_gio,
-                 ma_so_thue, so_nguoi_phu_thuoc, trang_thai, created_at, updated_at)
+                 ma_so_thue, so_nguoi_phu_thuoc, trang_thai, created_at, updated_at, ten_cua_hang)
             SELECT nextval('public.nhan_vien_id_seq'), tr.id, @displayName, @email, @passwordHash,
-                   @employeeType, @hourlySalary, @taxCode, @dependentsCount, @status, NOW(), NOW()
+                   @employeeType, @hourlySalary, @taxCode, @dependentsCount, @status, NOW(), NOW(), @shopName
             FROM target_role tr
             RETURNING id;
             """;
@@ -164,6 +167,7 @@ public sealed class PostgresUserManagementRepository(NpgsqlDataSource dataSource
         command.Parameters.AddWithValue("taxCode", (object?)data.TaxCode?.Trim() ?? DBNull.Value);
         command.Parameters.AddWithValue("dependentsCount", (object?)data.DependentsCount ?? DBNull.Value);
         command.Parameters.AddWithValue("status", (object?)data.Status?.Trim() ?? "Active");
+        command.Parameters.AddWithValue("shopName", (object?)data.ShopName?.Trim() ?? DBNull.Value);
 
         try
         {
@@ -206,7 +210,11 @@ public sealed class PostgresUserManagementRepository(NpgsqlDataSource dataSource
         return await GetUserByIdAsync(id, cancellationToken);
     }
 
-    public async Task<UserManagementDetail?> UpdateRoleAsync(long id, string roleName, CancellationToken cancellationToken = default)
+    public async Task<UserManagementDetail?> UpdateRoleAsync(
+        long id,
+        string roleName,
+        string? shopName,
+        CancellationToken cancellationToken = default)
     {
         const string sql = """
             UPDATE public.nhan_vien
@@ -215,6 +223,7 @@ public sealed class PostgresUserManagementRepository(NpgsqlDataSource dataSource
                     WHERE LOWER(ten_vai_tro) = LOWER(@roleName)
                     LIMIT 1
                 ),
+                ten_cua_hang = CASE WHEN LOWER(@roleName) = LOWER('Manager') THEN @shopName ELSE NULL END,
                 updated_at = NOW()
             WHERE id = @id;
             """;
@@ -222,6 +231,7 @@ public sealed class PostgresUserManagementRepository(NpgsqlDataSource dataSource
         await using var command = dataSource.CreateCommand(sql);
         command.Parameters.AddWithValue("id", id);
         command.Parameters.AddWithValue("roleName", roleName.Trim());
+        command.Parameters.AddWithValue("shopName", (object?)shopName?.Trim() ?? DBNull.Value);
 
         var rows = await command.ExecuteNonQueryAsync(cancellationToken);
         if (rows == 0) return null;
@@ -286,5 +296,6 @@ public sealed class PostgresUserManagementRepository(NpgsqlDataSource dataSource
         reader.IsDBNull(8) ? "Active" : reader.GetString(8),
         reader.IsDBNull(9) ? null : reader.GetDecimal(9),
         reader.GetFieldValue<DateTimeOffset>(10),
-        reader.GetFieldValue<DateTimeOffset>(11));
+        reader.GetFieldValue<DateTimeOffset>(11),
+        reader.IsDBNull(12) ? null : reader.GetString(12));
 }

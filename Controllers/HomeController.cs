@@ -30,6 +30,13 @@ public class HomeController : Controller
         return View();
     }
 
+    [HttpGet("/AdminUsers")]
+    [HttpGet("/Home/AdminUsers")]
+    public IActionResult AdminUsers()
+    {
+        return View();
+    }
+
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {

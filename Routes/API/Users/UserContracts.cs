@@ -11,7 +11,9 @@ public sealed record UserListItemDto(
     decimal HourlySalary,
     string? Status,
     DateTimeOffset CreatedAtUtc,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc,
+    bool IsRootAdmin,
+    string? ShopName);
 
 public sealed record UserDetailDto(
     long Id,
@@ -25,7 +27,9 @@ public sealed record UserDetailDto(
     string? Status,
     decimal? RatingScore,
     DateTimeOffset CreatedAtUtc,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc,
+    bool IsRootAdmin,
+    string? ShopName);
 
 public sealed record PagedUsersResponse(
     IReadOnlyList<UserListItemDto> Items,
@@ -51,6 +55,9 @@ public sealed class CreateUserRequest
 
     [StringLength(50, ErrorMessage = "Vai trò tối đa 50 ký tự.")]
     public string Role { get; set; } = "Employee";
+
+    [StringLength(200, ErrorMessage = "Tên shop tối đa 200 ký tự.")]
+    public string? ShopName { get; set; }
 
     [Required(ErrorMessage = "Loại nhân viên không được để trống.")]
     [StringLength(50, ErrorMessage = "Loại nhân viên tối đa 50 ký tự.")]
@@ -97,6 +104,9 @@ public sealed class AssignRoleRequest
     [Required(ErrorMessage = "Tên vai trò không được để trống.")]
     [StringLength(50, MinimumLength = 2, ErrorMessage = "Tên vai trò phải từ 2 đến 50 ký tự.")]
     public string Role { get; set; } = string.Empty;
+
+    [StringLength(200, ErrorMessage = "Tên shop tối đa 200 ký tự.")]
+    public string? ShopName { get; set; }
 }
 
 public sealed class UpdateUserStatusRequest

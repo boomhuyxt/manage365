@@ -9,7 +9,8 @@ public sealed record UserManagementItem(
     decimal HourlySalary,
     string? Status,
     DateTimeOffset CreatedAtUtc,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc,
+    string? ShopName);
 
 public sealed record UserManagementDetail(
     long Id,
@@ -23,7 +24,8 @@ public sealed record UserManagementDetail(
     string? Status,
     decimal? RatingScore,
     DateTimeOffset CreatedAtUtc,
-    DateTimeOffset UpdatedAtUtc);
+    DateTimeOffset UpdatedAtUtc,
+    string? ShopName);
 
 public sealed record UserFilterParams(
     string? Search,
@@ -49,7 +51,8 @@ public sealed record CreateUserData(
     decimal HourlySalary,
     string? TaxCode,
     int? DependentsCount,
-    string? Status);
+    string? Status,
+    string? ShopName);
 
 public sealed record UpdateUserData(
     string DisplayName,
@@ -66,7 +69,7 @@ public interface IUserManagementRepository
     Task<UserManagementDetail?> GetUserByEmailAsync(string normalizedEmail, CancellationToken cancellationToken = default);
     Task<UserManagementDetail?> CreateUserAsync(CreateUserData data, CancellationToken cancellationToken = default);
     Task<UserManagementDetail?> UpdateUserAsync(long id, UpdateUserData data, CancellationToken cancellationToken = default);
-    Task<UserManagementDetail?> UpdateRoleAsync(long id, string roleName, CancellationToken cancellationToken = default);
+    Task<UserManagementDetail?> UpdateRoleAsync(long id, string roleName, string? shopName, CancellationToken cancellationToken = default);
     Task<UserManagementDetail?> UpdateStatusAsync(long id, string status, CancellationToken cancellationToken = default);
     Task<bool> DeleteUserAsync(long id, CancellationToken cancellationToken = default);
 }

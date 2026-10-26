@@ -15,7 +15,8 @@ namespace manage365.Routes.API.Users;
 public sealed class UsersController(
     IUserManagementRepository userRepository,
     IRoleRepository roleRepository,
-    IPasswordHasher passwordHasher) : ControllerBase
+    IPasswordHasher passwordHasher,
+    IConfiguration configuration) : ControllerBase
 {
     /// <summary>
     /// Danh sách nhân viên phân trang kèm bộ lọc tìm kiếm (Quản lý và Quản trị viên)
@@ -46,7 +47,9 @@ public sealed class UsersController(
             u.HourlySalary,
             u.Status,
             u.CreatedAtUtc,
-            u.UpdatedAtUtc)).ToList();
+            u.UpdatedAtUtc,
+            IsRootAccount(u.Email),
+            u.ShopName)).ToList();
 
         return Ok(new PagedUsersResponse(dtos, result.Page, result.PageSize, result.TotalCount, result.TotalPages));
     }
@@ -100,10 +103,14 @@ public sealed class UsersController(
                 extensions: new Dictionary<string, object?> { ["code"] = "email_already_exists" });
         }
 
-        // Kiểm tra vai trò hợp lệ nếu có chỉ định
+        var requestedRole = string.IsNullOrWhiteSpace(request.Role)
+            ? AppRoles.Employee
+            : request.Role.Trim();
+
+        // Kiểm tra vai trò hợp lệ nếu có chỉ định.
         if (!string.IsNullOrWhiteSpace(request.Role))
         {
-            var role = await roleRepository.GetRoleByNameAsync(request.Role.Trim(), cancellationToken);
+            var role = await roleRepository.GetRoleByNameAsync(requestedRole, cancellationToken);
             if (role is null)
             {
                 return Problem(
@@ -113,17 +120,33 @@ public sealed class UsersController(
             }
         }
 
+        // Admin thường chỉ được tạo tài khoản User; các role cao hơn chỉ ROOT được cấp.
+        if (!IsCurrentUserRootAdmin() && !string.Equals(requestedRole, AppRoles.Employee, StringComparison.OrdinalIgnoreCase))
+        {
+            return Problem(statusCode: StatusCodes.Status403Forbidden,
+                title: "Admin thường chỉ được tạo tài khoản User. Chỉ ROOT Admin mới được tạo tài khoản với vai trò khác.",
+                extensions: new Dictionary<string, object?> { ["code"] = "role_grant_forbidden" });
+        }
+
+        if (string.Equals(requestedRole, AppRoles.Manager, StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(request.ShopName))
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest,
+                title: "Cần nhập tên shop khi tạo tài khoản Chủ shop.",
+                extensions: new Dictionary<string, object?> { ["code"] = "shop_name_required" });
+        }
+
         var passwordHash = passwordHasher.Hash(request.Password);
         var createData = new CreateUserData(
             normalizedEmail,
             request.DisplayName.Trim(),
             passwordHash,
-            string.IsNullOrWhiteSpace(request.Role) ? AppRoles.Employee : request.Role.Trim(),
+            requestedRole,
             request.EmployeeType.Trim(),
             request.HourlySalary,
             request.TaxCode?.Trim(),
             request.DependentsCount,
-            string.IsNullOrWhiteSpace(request.Status) ? "Active" : request.Status.Trim());
+            string.IsNullOrWhiteSpace(request.Status) ? "Active" : request.Status.Trim(),
+            string.Equals(requestedRole, AppRoles.Manager, StringComparison.OrdinalIgnoreCase) ? request.ShopName?.Trim() : null);
 
         var created = await userRepository.CreateUserAsync(createData, cancellationToken);
         if (created is null)
@@ -168,6 +191,19 @@ public sealed class UsersController(
             request.DependentsCount,
             request.Status?.Trim() ?? existing.Status ?? "Active");
 
+        if (IsRootAccount(existing.Email) && !string.Equals(updateData.Status, "Active", StringComparison.OrdinalIgnoreCase))
+        {
+            return RootAccountProtected("ROOT Admin không thể bị vô hiệu hóa.", "root_admin_immutable");
+        }
+
+        if (!IsCurrentUserRootAdmin() && string.Equals(existing.Role, AppRoles.Admin, StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(updateData.Status, existing.Status, StringComparison.OrdinalIgnoreCase))
+        {
+            return Problem(statusCode: StatusCodes.Status403Forbidden,
+                title: "Chỉ ROOT Admin mới có thể thay đổi trạng thái tài khoản Admin.",
+                extensions: new Dictionary<string, object?> { ["code"] = "admin_status_change_forbidden" });
+        }
+
         var updated = await userRepository.UpdateUserAsync(id, updateData, cancellationToken);
         if (updated is null)
         {
@@ -211,7 +247,40 @@ public sealed class UsersController(
                 extensions: new Dictionary<string, object?> { ["code"] = "role_not_found" });
         }
 
-        var updated = await userRepository.UpdateRoleAsync(id, role.Name, cancellationToken);
+        var isRootCaller = IsCurrentUserRootAdmin();
+        var isRootTarget = IsRootAccount(user.Email);
+        if (isRootTarget && !isRootCaller)
+        {
+            return Problem(statusCode: StatusCodes.Status403Forbidden,
+                title: "Chỉ ROOT Admin mới được quản lý vai trò của tài khoản ROOT.",
+                extensions: new Dictionary<string, object?> { ["code"] = "root_admin_action_forbidden" });
+        }
+
+        if (isRootTarget && !string.Equals(role.Name, AppRoles.Admin, StringComparison.OrdinalIgnoreCase))
+        {
+            return RootAccountProtected("Không thể hạ quyền tài khoản ROOT Admin.", "root_admin_immutable");
+        }
+
+        if (!isRootCaller &&
+            (!string.Equals(user.Role, AppRoles.Employee, StringComparison.OrdinalIgnoreCase) ||
+             !string.Equals(role.Name, AppRoles.Manager, StringComparison.OrdinalIgnoreCase)))
+        {
+            return Problem(statusCode: StatusCodes.Status403Forbidden,
+                title: "Admin thường chỉ được nâng tài khoản User lên Chủ shop. Chỉ ROOT Admin được gán các vai trò khác.",
+                extensions: new Dictionary<string, object?> { ["code"] = "role_grant_forbidden" });
+        }
+
+        var shopName = string.Equals(role.Name, AppRoles.Manager, StringComparison.OrdinalIgnoreCase)
+            ? request.ShopName?.Trim() ?? user.ShopName
+            : null;
+        if (string.Equals(role.Name, AppRoles.Manager, StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(shopName))
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest,
+                title: "Cần nhập tên shop khi gán vai trò Chủ shop.",
+                extensions: new Dictionary<string, object?> { ["code"] = "shop_name_required" });
+        }
+
+        var updated = await userRepository.UpdateRoleAsync(id, role.Name, shopName, cancellationToken);
         if (updated is null)
         {
             return Problem(
@@ -243,6 +312,18 @@ public sealed class UsersController(
                 statusCode: StatusCodes.Status404NotFound,
                 title: $"Không tìm thấy nhân viên có ID {id}.",
                 extensions: new Dictionary<string, object?> { ["code"] = "user_not_found" });
+        }
+
+        if (IsRootAccount(user.Email))
+        {
+            return RootAccountProtected("Không thể vô hiệu hóa tài khoản ROOT Admin.", "root_admin_immutable");
+        }
+
+        if (!IsCurrentUserRootAdmin() && string.Equals(user.Role, AppRoles.Admin, StringComparison.OrdinalIgnoreCase))
+        {
+            return Problem(statusCode: StatusCodes.Status403Forbidden,
+                title: "Chỉ ROOT Admin mới có thể thay đổi trạng thái tài khoản Admin.",
+                extensions: new Dictionary<string, object?> { ["code"] = "admin_status_change_forbidden" });
         }
 
         var updated = await userRepository.UpdateStatusAsync(id, request.Status.Trim(), cancellationToken);
@@ -284,6 +365,18 @@ public sealed class UsersController(
                 extensions: new Dictionary<string, object?> { ["code"] = "user_not_found" });
         }
 
+        if (IsRootAccount(user.Email))
+        {
+            return RootAccountProtected("Không thể xóa tài khoản ROOT Admin.", "root_admin_immutable");
+        }
+
+        if (!IsCurrentUserRootAdmin() && string.Equals(user.Role, AppRoles.Admin, StringComparison.OrdinalIgnoreCase))
+        {
+            return Problem(statusCode: StatusCodes.Status403Forbidden,
+                title: "Chỉ ROOT Admin mới có thể xóa tài khoản Admin khác.",
+                extensions: new Dictionary<string, object?> { ["code"] = "admin_delete_forbidden" });
+        }
+
         var deleted = await userRepository.DeleteUserAsync(id, cancellationToken);
         if (!deleted)
         {
@@ -296,7 +389,7 @@ public sealed class UsersController(
         return Ok(new { message = $"Đã xử lý xóa/vô hiệu hóa nhân viên '{user.DisplayName}'." });
     }
 
-    private static UserDetailDto ToDetailDto(UserManagementDetail user) => new(
+    private UserDetailDto ToDetailDto(UserManagementDetail user) => new(
         user.Id,
         user.Email,
         user.DisplayName,
@@ -308,7 +401,27 @@ public sealed class UsersController(
         user.Status,
         user.RatingScore,
         user.CreatedAtUtc,
-        user.UpdatedAtUtc);
+        user.UpdatedAtUtc,
+        IsRootAccount(user.Email),
+        user.ShopName);
+
+    private bool IsRootAccount(string email)
+    {
+        var rootEmail = configuration["RootAdmin:Email"];
+        return !string.IsNullOrWhiteSpace(rootEmail) &&
+               string.Equals(email, rootEmail.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsCurrentUserRootAdmin()
+    {
+        var email = User.FindFirst(JwtRegisteredClaimNames.Email)?.Value;
+        return email is not null && IsRootAccount(email);
+    }
+
+    private ObjectResult RootAccountProtected(string title, string code) => Problem(
+        statusCode: StatusCodes.Status409Conflict,
+        title: title,
+        extensions: new Dictionary<string, object?> { ["code"] = code });
 
     private bool IsAdminOrManager()
     {

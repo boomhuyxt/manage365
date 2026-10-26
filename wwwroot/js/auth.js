@@ -78,6 +78,11 @@ document.addEventListener("DOMContentLoaded", () => {
     storage.setItem("user", JSON.stringify(authResponse.user));
   }
 
+  function redirectAfterAuth(authResponse) {
+    const role = (authResponse?.user?.role || "").toLowerCase();
+    window.location.assign(role === "admin" ? "/AdminUsers" : "/");
+  }
+
   async function sendAuthRequest(url, body) {
     const response = await fetch(url, {
       method: "POST",
@@ -281,7 +286,7 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       const authResponse = await sendAuthRequest("/api/auth/login", { email, password });
       saveSession(authResponse, remember);
-      window.location.assign("/");
+      redirectAfterAuth(authResponse);
     } catch (error) {
       const message = error.status === 401
         ? "Email hoặc mật khẩu không chính xác."
@@ -312,7 +317,7 @@ document.addEventListener("DOMContentLoaded", () => {
         displayName,
       });
       saveSession(authResponse, true);
-      window.location.assign("/");
+      redirectAfterAuth(authResponse);
     } catch (error) {
       const message = error.status === 409
         ? "Email này đã được đăng ký."

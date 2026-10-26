@@ -31,6 +31,8 @@
 .app-account-role { padding: 4px 9px; border: 1px solid #d9e0e4; border-radius: 999px; background: #f1f4f5; color: #59636c; font-size: 10px; font-weight: 800; line-height: 1.2; }
 .app-account-role.is-owner { padding: 5px 11px; border-color: #dc6500; background: #f47700; box-shadow: 0 3px 9px rgba(224, 102, 0, .24); color: #fff; font-size: 11px; letter-spacing: .035em; text-transform: uppercase; }
 .app-account-role.is-owner::before { content: "✦"; margin-right: 5px; color: #ffe5a8; font-size: 12px; }
+.app-account-role.is-root { padding-inline: 13px; background: #b7352a; border-color: #982a22; box-shadow: 0 3px 10px rgba(183, 53, 42, .24); }
+.app-account-role.is-root::before { content: "ROOT"; margin-right: 6px; color: #ffe2a4; font-size: 9px; }
 .app-logout { min-height: 36px; padding: 7px 11px; border: 1px solid #d8dadd; border-radius: 8px; background: #fff; color: #586068; font-size: 12px; font-weight: 700; white-space: nowrap; }
 .app-logout:hover { border-color: #cbd0d3; background: #f7f8f8; color: #30363b; }
 

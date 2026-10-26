@@ -14,7 +14,8 @@ public sealed class AuthController(
     IPasswordHasher passwordHasher,
     IJwtTokenService tokenService,
     IRefreshTokenRepository refreshTokenRepository,
-    IOptions<JwtOptions> jwtOptions) : ControllerBase
+    IOptions<JwtOptions> jwtOptions,
+    IConfiguration configuration) : ControllerBase
 {
     [HttpPost("register")]
     [EnableRateLimiting("auth")]
@@ -116,7 +117,7 @@ public sealed class AuthController(
             "Bearer",
             accessToken.ExpiresAtUtc,
             updatedToken.ExpiresAtUtc,
-            new UserResponse(user.Id, user.Email, user.DisplayName, user.Role));
+            new UserResponse(user.Id, user.Email, user.DisplayName, user.Role, IsRootAccount(user.Email), IsRootAdminConfigured, user.ShopName));
 
         return Ok(response);
     }
@@ -141,7 +142,7 @@ public sealed class AuthController(
     [HttpGet("me")]
     [ProducesResponseType<UserResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    public ActionResult<UserResponse> Me()
+    public async Task<ActionResult<UserResponse>> Me(CancellationToken cancellationToken)
     {
         var subject = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;
         var email = User.FindFirst(JwtRegisteredClaimNames.Email)?.Value;
@@ -153,7 +154,9 @@ public sealed class AuthController(
             return Unauthorized();
         }
 
-        return Ok(new UserResponse(userId, email, displayName, role));
+        var current = await userRepository.FindByIdAsync(userId, cancellationToken);
+        if (current is null) return Unauthorized();
+        return Ok(new UserResponse(current.Id, current.Email, current.DisplayName, current.Role, IsRootAccount(current.Email), IsRootAdminConfigured, current.ShopName));
     }
 
     private async Task<AuthResponse> CreateAuthResponseAsync(
@@ -180,8 +183,17 @@ public sealed class AuthController(
             "Bearer",
             accessToken.ExpiresAtUtc,
             refreshExpiresAt,
-            new UserResponse(user.Id, user.Email, user.DisplayName, user.Role));
+            new UserResponse(user.Id, user.Email, user.DisplayName, user.Role, IsRootAccount(user.Email), IsRootAdminConfigured, user.ShopName));
     }
+
+    private bool IsRootAccount(string email)
+    {
+        var rootEmail = configuration["RootAdmin:Email"];
+        return !string.IsNullOrWhiteSpace(rootEmail) &&
+               string.Equals(email, rootEmail.Trim(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    private bool IsRootAdminConfigured => !string.IsNullOrWhiteSpace(configuration["RootAdmin:Email"]);
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 }

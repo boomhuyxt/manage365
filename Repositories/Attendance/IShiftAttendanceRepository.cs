@@ -26,6 +26,13 @@ public interface IShiftAttendanceRepository
         DateTimeOffset nowUtc,
         int limit = 50,
         CancellationToken cancellationToken = default);
+
+    Task<AdminAttendanceHistoryPageDto> GetAdminAttendanceHistoryAsync(
+        DateOnly fromDate,
+        DateOnly toDate,
+        int page = 1,
+        int pageSize = 50,
+        CancellationToken cancellationToken = default);
 }
 
 public sealed record SubmitAttendanceResult(

@@ -133,3 +133,21 @@ public sealed record AdminAttendanceRecordDto(
     string Status,
     AttendanceLocationDto? CheckInLocation,
     AttendanceLocationDto? CheckOutLocation);
+
+public sealed record AdminAttendanceHistoryRecordDto(
+    long AttendanceId,
+    long EmployeeId,
+    string EmployeeName,
+    string? EmployeeEmail,
+    string ShiftName,
+    string ShiftDate,
+    DateTimeOffset CheckInAt,
+    DateTimeOffset? CheckOutAt,
+    decimal? ActualHours,
+    string Status);
+
+public sealed record AdminAttendanceHistoryPageDto(
+    IReadOnlyList<AdminAttendanceHistoryRecordDto> Records,
+    int TotalCount,
+    int Page,
+    int PageSize);

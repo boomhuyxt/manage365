@@ -29,7 +29,7 @@ public sealed class PostgresRefreshTokenRepository(NpgsqlDataSource dataSource) 
                 );
 
                 CREATE INDEX IF NOT EXISTS ix_user_refresh_tokens_user_id ON public.user_refresh_tokens(user_id);
-                CREATE INDEX IF NOT EXISTS ix_user_refresh_tokens_token_hash ON public.user_refresh_tokens(token_hash);
+                -- token_hash UNIQUE already provides the lookup index.
                 CREATE INDEX IF NOT EXISTS ix_user_refresh_tokens_expires_at ON public.user_refresh_tokens(expires_at);
                 """;
 

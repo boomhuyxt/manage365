@@ -151,6 +151,33 @@ builder.Services
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromSeconds(30)
         };
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var subject = context.Principal?.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value;
+                var tokenRole = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+                if (!long.TryParse(subject, out var userId) || string.IsNullOrWhiteSpace(tokenRole))
+                {
+                    context.Fail("The access token does not contain a valid account identity.");
+                    return;
+                }
+
+                try
+                {
+                    var userRepository = context.HttpContext.RequestServices.GetRequiredService<IUserRepository>();
+                    var currentUser = await userRepository.FindByIdAsync(userId, context.HttpContext.RequestAborted);
+                    if (currentUser is null || !string.Equals(currentUser.Role, tokenRole, StringComparison.OrdinalIgnoreCase))
+                    {
+                        context.Fail("The account role has changed. Sign in again to continue.");
+                    }
+                }
+                catch
+                {
+                    context.Fail("The account could not be validated.");
+                }
+            }
+        };
     });
 builder.Services.AddAuthorization();
 
