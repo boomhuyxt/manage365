@@ -87,15 +87,68 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  function showOwnerView() {
+  function showOwnerView(role) {
+    document.querySelectorAll("[data-owner-only]").forEach((node) => { node.hidden = false; });
+    const roleSummaryColumn = document.getElementById("roleSummaryColumn");
+    roleSummaryColumn?.classList.remove("col-lg-12");
+    roleSummaryColumn?.classList.add("col-lg-6");
     if (userRoleBadge) {
-      userRoleBadge.textContent = "Chủ cửa hàng";
+      userRoleBadge.textContent = role === "admin" ? "Admin" : "Chủ cửa hàng";
       userRoleBadge.classList.remove("bg-secondary-subtle", "text-secondary");
       userRoleBadge.classList.add("bg-warning-subtle", "text-warning-orange");
     }
 
     adminView?.classList.remove("d-none");
     employeeView?.classList.add("d-none");
+  }
+
+  function showEmployeeView(role) {
+    document.querySelectorAll("[data-owner-only]").forEach((node) => { node.hidden = true; });
+    const roleSummaryColumn = document.getElementById("roleSummaryColumn");
+    roleSummaryColumn?.classList.remove("col-lg-6");
+    roleSummaryColumn?.classList.add("col-lg-12");
+    if (userRoleBadge) {
+      userRoleBadge.textContent = role === "admin" ? "Admin" : "User";
+      userRoleBadge.classList.remove("bg-warning-subtle", "text-warning-orange");
+      userRoleBadge.classList.add("bg-secondary-subtle", "text-secondary");
+    }
+    adminView?.classList.add("d-none");
+    employeeView?.classList.remove("d-none");
+  }
+
+  async function initializeRoleView() {
+    let role = (currentUser?.role || "").toLowerCase();
+    showEmployeeView(role);
+    try {
+      const response = await fetch("/api/auth/me", {
+        headers: { Authorization: `Bearer ${accessToken}` },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!response.ok) {
+        if (response.status === 401) redirectToLogin();
+        return;
+      }
+      const user = await response.json();
+      role = (user.role || "").toLowerCase();
+      const storage = localStorage.getItem("accessToken") ? localStorage : sessionStorage;
+      storage.setItem("user", JSON.stringify(user));
+    } catch {
+      // Fail closed: without a fresh role, do not initialize owner-only APIs.
+      return;
+    }
+
+    const canUseOwnerUi = role === "manager" || role === "admin";
+    if (canUseOwnerUi) showOwnerView(role);
+    else showEmployeeView(role);
+
+    updateClock();
+    window.setInterval(updateClock, 1000);
+    if (!canUseOwnerUi) return;
+
+    fetchAndRenderServerQR();
+    loadStoreLocation();
+    refreshAdminSnapshot();
+    window.setInterval(refreshAdminSnapshot, 5000);
   }
   function escapeHtml(value) {
     return String(value ?? "")
@@ -636,12 +689,5 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  showOwnerView();
-  updateClock();
-  window.setInterval(updateClock, 1000);
-
-  fetchAndRenderServerQR();
-  loadStoreLocation();
-  refreshAdminSnapshot();
-  window.setInterval(refreshAdminSnapshot, 5000);
+  initializeRoleView();
 });

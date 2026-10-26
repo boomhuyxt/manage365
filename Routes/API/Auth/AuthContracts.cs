@@ -47,4 +47,7 @@ public sealed record UserResponse(
     long Id,
     string Email,
     string DisplayName,
-    string Role);
+    string Role,
+    bool IsRootAdmin,
+    bool RootAdminConfigured,
+    string? ShopName);

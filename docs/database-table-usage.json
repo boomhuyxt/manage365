@@ -1,0 +1,1007 @@
+{
+  "audited_at": "2026-10-26",
+  "scope": "Current backend/web/mobile source before cleanup; paths relative to backend root unless prefixed mobile/",
+  "tables": {
+    "bang_luong": {
+      "rows_at_audit": 0,
+      "action": "removed_empty_unused",
+      "source_references": []
+    },
+    "bao_hiem": {
+      "rows_at_audit": 0,
+      "action": "removed_empty_unused",
+      "source_references": []
+    },
+    "ca_lam": {
+      "rows_at_audit": 19,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\PostgresReportingRepository.cs",
+          "lines": [
+            19,
+            25,
+            56,
+            95
+          ]
+        },
+        {
+          "file": "Repositories\\Attendance\\PostgresShiftAttendanceRepository.cs",
+          "lines": [
+            37,
+            137,
+            208,
+            292,
+            575
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.cs",
+          "lines": [
+            90
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Queries.cs",
+          "lines": [
+            33,
+            268,
+            374
+          ]
+        },
+        {
+          "file": "Repositories\\Shifts\\PostgresShiftSchedulingRepository.cs",
+          "lines": [
+            30,
+            45,
+            58,
+            60,
+            85,
+            86,
+            324,
+            460,
+            556
+          ]
+        },
+        {
+          "file": "Repositories\\Shifts\\PostgresShiftSchedulingRepository.Writes.cs",
+          "lines": [
+            66,
+            149,
+            163
+          ]
+        }
+      ]
+    },
+    "cham_cong": {
+      "rows_at_audit": 13,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\PostgresReportingRepository.cs",
+          "lines": [
+            21,
+            22,
+            29,
+            53,
+            90,
+            107
+          ]
+        },
+        {
+          "file": "Repositories\\Attendance\\PostgresShiftAttendanceRepository.cs",
+          "lines": [
+            38,
+            135,
+            205,
+            289,
+            339,
+            411,
+            460,
+            512,
+            517,
+            518,
+            576,
+            638,
+            689,
+            694,
+            695
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Queries.cs",
+          "lines": [
+            368
+          ]
+        },
+        {
+          "file": "Repositories\\Shifts\\PostgresShiftSchedulingRepository.cs",
+          "lines": [
+            328,
+            464
+          ]
+        }
+      ]
+    },
+    "chi_tiet_hoa_don": {
+      "rows_at_audit": 0,
+      "action": "removed_empty_unused",
+      "source_references": []
+    },
+    "cong_cu_phong_ban": {
+      "rows_at_audit": 12,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\Departments\\PostgresDepartmentRepository.cs",
+          "lines": [
+            24,
+            51,
+            61,
+            66,
+            71,
+            76,
+            81,
+            86,
+            91,
+            96,
+            101,
+            106,
+            111,
+            116,
+            140,
+            193,
+            242,
+            269,
+            291,
+            307,
+            329,
+            363,
+            388,
+            437,
+            443
+          ]
+        }
+      ]
+    },
+    "dang_ky_ca": {
+      "rows_at_audit": 19,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\PostgresReportingRepository.cs",
+          "lines": [
+            18,
+            25,
+            55,
+            95
+          ]
+        },
+        {
+          "file": "Repositories\\Attendance\\PostgresShiftAttendanceRepository.cs",
+          "lines": [
+            36,
+            136,
+            207,
+            291,
+            574
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.cs",
+          "lines": [
+            43,
+            89
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Queries.cs",
+          "lines": [
+            32,
+            267,
+            374
+          ]
+        },
+        {
+          "file": "Repositories\\Shifts\\PostgresShiftSchedulingRepository.cs",
+          "lines": [
+            43,
+            65,
+            67,
+            72,
+            74,
+            79,
+            81,
+            87,
+            88,
+            323,
+            459,
+            555
+          ]
+        },
+        {
+          "file": "Repositories\\Shifts\\PostgresShiftSchedulingRepository.Writes.cs",
+          "lines": [
+            94,
+            153,
+            163
+          ]
+        },
+        {
+          "file": "Routes\\API\\Shifts\\ShiftAssignmentsController.cs",
+          "lines": [
+            111
+          ]
+        }
+      ]
+    },
+    "dia_diem_cham_cong": {
+      "rows_at_audit": 1,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\Attendance\\PostgresAttendanceLocationRepository.cs",
+          "lines": [
+            17,
+            42,
+            46,
+            130
+          ]
+        }
+      ]
+    },
+    "don_dat_hang": {
+      "rows_at_audit": 0,
+      "action": "removed_empty_unused",
+      "source_references": []
+    },
+    "don_nghi_phep": {
+      "rows_at_audit": 7,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\PostgresReportingRepository.cs",
+          "lines": [
+            23,
+            32,
+            93
+          ]
+        },
+        {
+          "file": "Repositories\\Attendance\\PostgresShiftAttendanceRepository.cs",
+          "lines": [
+            42,
+            366,
+            438,
+            516,
+            611,
+            615,
+            693
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.cs",
+          "lines": [
+            34,
+            76,
+            88,
+            106,
+            118,
+            138,
+            139,
+            140
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Queries.cs",
+          "lines": [
+            327,
+            450,
+            696,
+            715,
+            836,
+            851,
+            928
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Validation.cs",
+          "lines": [
+            40,
+            65
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Writes.cs",
+          "lines": [
+            289,
+            291,
+            437,
+            471,
+            537,
+            621,
+            623,
+            697,
+            733,
+            788,
+            845
+          ]
+        },
+        {
+          "file": "Repositories\\Shifts\\PostgresShiftSchedulingRepository.cs",
+          "lines": [
+            332,
+            468,
+            577
+          ]
+        },
+        {
+          "file": "Repositories\\Shifts\\PostgresShiftSchedulingRepository.Writes.cs",
+          "lines": [
+            123
+          ]
+        }
+      ]
+    },
+    "don_nghi_phep_ca": {
+      "rows_at_audit": 0,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\PostgresReportingRepository.cs",
+          "lines": [
+            31,
+            92
+          ]
+        },
+        {
+          "file": "Repositories\\Attendance\\PostgresShiftAttendanceRepository.cs",
+          "lines": [
+            41,
+            610
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.cs",
+          "lines": [
+            86,
+            143,
+            144
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Queries.cs",
+          "lines": [
+            449,
+            479,
+            714
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Validation.cs",
+          "lines": [
+            63,
+            89
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Writes.cs",
+          "lines": [
+            342,
+            344,
+            645,
+            647
+          ]
+        },
+        {
+          "file": "Repositories\\Shifts\\PostgresShiftSchedulingRepository.cs",
+          "lines": [
+            331,
+            467
+          ]
+        },
+        {
+          "file": "Repositories\\Shifts\\PostgresShiftSchedulingRepository.Writes.cs",
+          "lines": [
+            122
+          ]
+        }
+      ]
+    },
+    "don_nghi_phep_idempotency": {
+      "rows_at_audit": 7,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.cs",
+          "lines": [
+            127
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Writes.cs",
+          "lines": [
+            242,
+            404,
+            884,
+            913
+          ]
+        }
+      ]
+    },
+    "don_nghi_phep_khoang": {
+      "rows_at_audit": 7,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\Attendance\\PostgresShiftAttendanceRepository.cs",
+          "lines": [
+            366,
+            437,
+            516,
+            614,
+            693
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.cs",
+          "lines": [
+            74,
+            141,
+            142
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Queries.cs",
+          "lines": [
+            326,
+            407,
+            682,
+            760,
+            927
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Validation.cs",
+          "lines": [
+            50,
+            62,
+            76
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Writes.cs",
+          "lines": [
+            325,
+            327,
+            819
+          ]
+        },
+        {
+          "file": "Repositories\\Shifts\\PostgresShiftSchedulingRepository.cs",
+          "lines": [
+            576
+          ]
+        }
+      ]
+    },
+    "don_nghi_phep_ngay": {
+      "rows_at_audit": 7,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.cs",
+          "lines": [
+            104,
+            145,
+            146
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Queries.cs",
+          "lines": [
+            516,
+            835,
+            850
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Validation.cs",
+          "lines": [
+            64,
+            107
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Writes.cs",
+          "lines": [
+            370,
+            372
+          ]
+        }
+      ]
+    },
+    "hoa_don": {
+      "rows_at_audit": 0,
+      "action": "removed_empty_unused",
+      "source_references": []
+    },
+    "khuyen_mai": {
+      "rows_at_audit": 0,
+      "action": "removed_empty_unused",
+      "source_references": []
+    },
+    "lich_su_dia_diem_cham_cong": {
+      "rows_at_audit": 39,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\Attendance\\PostgresAttendanceLocationRepository.cs",
+          "lines": [
+            72
+          ]
+        }
+      ]
+    },
+    "lich_su_don_nghi_phep": {
+      "rows_at_audit": 15,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.cs",
+          "lines": [
+            116,
+            147
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Queries.cs",
+          "lines": [
+            537
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Writes.cs",
+          "lines": [
+            389,
+            485,
+            658,
+            751,
+            861
+          ]
+        }
+      ]
+    },
+    "loai_san_pham": {
+      "rows_at_audit": 0,
+      "action": "removed_empty_unused",
+      "source_references": []
+    },
+    "mau_ca_lam": {
+      "rows_at_audit": 5,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\Shifts\\PostgresShiftSchedulingRepository.cs",
+          "lines": [
+            14,
+            37,
+            60,
+            90,
+            109,
+            149,
+            191,
+            239,
+            284,
+            327,
+            463
+          ]
+        },
+        {
+          "file": "Repositories\\Shifts\\PostgresShiftSchedulingRepository.Writes.cs",
+          "lines": [
+            55
+          ]
+        }
+      ]
+    },
+    "nhan_vien": {
+      "rows_at_audit": 14,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\PostgresNotificationRepository.cs",
+          "lines": [
+            14
+          ]
+        },
+        {
+          "file": "Repositories\\PostgresReportingRepository.cs",
+          "lines": [
+            54,
+            96,
+            108
+          ]
+        },
+        {
+          "file": "Repositories\\Attendance\\PostgresShiftAttendanceRepository.cs",
+          "lines": [
+            206,
+            290,
+            401,
+            564
+          ]
+        },
+        {
+          "file": "Repositories\\Auth\\PasswordResetRepository.cs",
+          "lines": [
+            130
+          ]
+        },
+        {
+          "file": "Repositories\\Auth\\PostgresRefreshTokenRepository.cs",
+          "lines": [
+            21
+          ]
+        },
+        {
+          "file": "Repositories\\Auth\\UserRepository.cs",
+          "lines": [
+            30,
+            50,
+            75
+          ]
+        },
+        {
+          "file": "Repositories\\Departments\\PostgresDepartmentRepository.cs",
+          "lines": [
+            43,
+            46,
+            52,
+            121,
+            139,
+            161,
+            192,
+            241,
+            398,
+            415
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.cs",
+          "lines": [
+            36,
+            55,
+            77,
+            107,
+            119,
+            128
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Queries.cs",
+          "lines": [
+            451,
+            453,
+            538,
+            697,
+            716,
+            718,
+            837,
+            852
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Writes.cs",
+          "lines": [
+            538,
+            1029
+          ]
+        },
+        {
+          "file": "Repositories\\Permissions\\PostgresPermissionRepository.cs",
+          "lines": [
+            233
+          ]
+        },
+        {
+          "file": "Repositories\\Roles\\PostgresRoleRepository.cs",
+          "lines": [
+            14,
+            38,
+            58,
+            103,
+            134
+          ]
+        },
+        {
+          "file": "Repositories\\Shifts\\PostgresShiftSchedulingRepository.cs",
+          "lines": [
+            46,
+            325,
+            461
+          ]
+        },
+        {
+          "file": "Repositories\\Shifts\\PostgresShiftSchedulingRepository.Writes.cs",
+          "lines": [
+            15,
+            44
+          ]
+        },
+        {
+          "file": "Repositories\\Users\\PostgresUserManagementRepository.cs",
+          "lines": [
+            48,
+            67,
+            109,
+            129,
+            151,
+            187,
+            220,
+            245,
+            265,
+            275
+          ]
+        },
+        {
+          "file": "Routes\\API\\LeaveRequests\\LeaveAccountFilter.cs",
+          "lines": [
+            22
+          ]
+        }
+      ]
+    },
+    "nhap_kho": {
+      "rows_at_audit": 0,
+      "action": "removed_empty_unused",
+      "source_references": []
+    },
+    "notifications": {
+      "rows_at_audit": 6,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\PostgresNotificationRepository.cs",
+          "lines": [
+            12,
+            24,
+            26,
+            40,
+            57,
+            83,
+            90,
+            99
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Writes.cs",
+          "lines": [
+            1009
+          ]
+        },
+        {
+          "file": "Routes\\API\\NotificationsController.cs",
+          "lines": [
+            13
+          ]
+        }
+      ]
+    },
+    "password_reset_codes": {
+      "rows_at_audit": 3,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\Auth\\PasswordResetRepository.cs",
+          "lines": [
+            32,
+            44,
+            57,
+            74,
+            82,
+            122,
+            135
+          ]
+        }
+      ]
+    },
+    "phong_ban": {
+      "rows_at_audit": 3,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\Departments\\PostgresDepartmentRepository.cs",
+          "lines": [
+            12,
+            26,
+            47,
+            54,
+            63,
+            68,
+            73,
+            78,
+            83,
+            88,
+            93,
+            98,
+            103,
+            108,
+            113,
+            118,
+            122,
+            138,
+            163,
+            195,
+            210,
+            234,
+            258,
+            416
+          ]
+        },
+        {
+          "file": "Repositories\\LeaveRequests\\PostgresLeaveRequestRepository.Queries.cs",
+          "lines": [
+            452,
+            717,
+            853
+          ]
+        },
+        {
+          "file": "Repositories\\Shifts\\PostgresShiftSchedulingRepository.cs",
+          "lines": [
+            326,
+            462
+          ]
+        },
+        {
+          "file": "Repositories\\Shifts\\PostgresShiftSchedulingRepository.Writes.cs",
+          "lines": [
+            15
+          ]
+        }
+      ]
+    },
+    "quyen": {
+      "rows_at_audit": 9,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\Permissions\\PostgresPermissionRepository.cs",
+          "lines": [
+            12,
+            24,
+            29,
+            32,
+            48,
+            55,
+            62,
+            78,
+            83,
+            108,
+            124,
+            144,
+            174,
+            195,
+            208,
+            235
+          ]
+        }
+      ]
+    },
+    "san_pham": {
+      "rows_at_audit": 0,
+      "action": "removed_empty_unused",
+      "source_references": []
+    },
+    "user_refresh_tokens": {
+      "rows_at_audit": 134,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\Auth\\PostgresRefreshTokenRepository.cs",
+          "lines": [
+            19,
+            31,
+            32,
+            33,
+            56,
+            77,
+            102,
+            123,
+            141
+          ]
+        }
+      ]
+    },
+    "vai_tro": {
+      "rows_at_audit": 5,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\Auth\\UserRepository.cs",
+          "lines": [
+            31,
+            51,
+            69
+          ]
+        },
+        {
+          "file": "Repositories\\Permissions\\PostgresPermissionRepository.cs",
+          "lines": [
+            23,
+            47,
+            54,
+            61
+          ]
+        },
+        {
+          "file": "Repositories\\Roles\\PostgresRoleRepository.cs",
+          "lines": [
+            13,
+            37,
+            57,
+            74,
+            97,
+            125
+          ]
+        },
+        {
+          "file": "Repositories\\Users\\PostgresUserManagementRepository.cs",
+          "lines": [
+            49,
+            68,
+            110,
+            130,
+            146,
+            148,
+            222
+          ]
+        },
+        {
+          "file": "Routes\\API\\LeaveRequests\\LeaveAccountFilter.cs",
+          "lines": [
+            22
+          ]
+        }
+      ]
+    },
+    "vai_tro_quyen": {
+      "rows_at_audit": 17,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\Permissions\\PostgresPermissionRepository.cs",
+          "lines": [
+            22,
+            30,
+            45,
+            52,
+            59,
+            209,
+            234,
+            264,
+            271
+          ]
+        }
+      ]
+    },
+    "vi_tri_cham_cong": {
+      "rows_at_audit": 23,
+      "action": "retain",
+      "source_references": [
+        {
+          "file": "Repositories\\Attendance\\PostgresShiftAttendanceRepository.cs",
+          "lines": [
+            213,
+            222,
+            471,
+            524,
+            647,
+            701
+          ]
+        }
+      ]
+    }
+  }
+}

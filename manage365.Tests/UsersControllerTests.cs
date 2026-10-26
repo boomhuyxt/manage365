@@ -7,6 +7,7 @@ using manage365.Routes.API.Auth;
 using manage365.Routes.API.Users;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace manage365.Tests;
@@ -23,7 +24,7 @@ public sealed class UsersControllerTests
         _userRepo = new FakeUserManagementRepository();
         _roleRepo = new FakeRoleRepoForUsers();
         _hasher = new FakePasswordHasherForUsers();
-        _controller = new UsersController(_userRepo, _roleRepo, _hasher)
+        _controller = new UsersController(_userRepo, _roleRepo, _hasher, new ConfigurationBuilder().Build())
         {
             ControllerContext = new ControllerContext
             {
@@ -160,7 +161,7 @@ public sealed class UsersControllerTests
     [Fact]
     public async Task AssignRole_ReturnsOk_WhenRoleExists()
     {
-        var request = new AssignRoleRequest { Role = AppRoles.Manager };
+        var request = new AssignRoleRequest { Role = AppRoles.Manager, ShopName = "Test Shop" };
 
         var result = await _controller.AssignRole(2, request, CancellationToken.None);
 
@@ -214,14 +215,14 @@ public sealed class UsersControllerTests
     {
         private readonly List<UserManagementDetail> _users =
         [
-            new(1, "admin@manage365.io.vn", "System Admin", AppRoles.Admin, "FullTime", 50000, null, 0, "Active", null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow),
-            new(2, "staff@manage365.io.vn", "Staff Member", AppRoles.Employee, "PartTime", 25000, null, 0, "Active", null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow)
+            new(1, "admin@manage365.io.vn", "System Admin", AppRoles.Admin, "FullTime", 50000, null, 0, "Active", null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null),
+            new(2, "staff@manage365.io.vn", "Staff Member", AppRoles.Employee, "PartTime", 25000, null, 0, "Active", null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, null)
         ];
 
         public Task<PagedUserResult<UserManagementItem>> GetUsersAsync(UserFilterParams filter, CancellationToken cancellationToken = default)
         {
             var items = _users.Select(u => new UserManagementItem(
-                u.Id, u.Email, u.DisplayName, u.Role, u.EmployeeType, u.HourlySalary, u.Status, u.CreatedAtUtc, u.UpdatedAtUtc
+                u.Id, u.Email, u.DisplayName, u.Role, u.EmployeeType, u.HourlySalary, u.Status, u.CreatedAtUtc, u.UpdatedAtUtc, u.ShopName
             )).ToList();
 
             return Task.FromResult(new PagedUserResult<UserManagementItem>(items, 1, 10, items.Count, 1));
@@ -242,7 +243,7 @@ public sealed class UsersControllerTests
 
             var item = new UserManagementDetail(
                 _users.Count + 1, data.Email, data.DisplayName, data.Role, data.EmployeeType, data.HourlySalary,
-                data.TaxCode, data.DependentsCount, data.Status, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow
+                data.TaxCode, data.DependentsCount, data.Status, null, DateTimeOffset.UtcNow, DateTimeOffset.UtcNow, data.ShopName
             );
             _users.Add(item);
             return Task.FromResult<UserManagementDetail?>(item);
@@ -268,13 +269,13 @@ public sealed class UsersControllerTests
             return Task.FromResult<UserManagementDetail?>(updated);
         }
 
-        public Task<UserManagementDetail?> UpdateRoleAsync(long id, string roleName, CancellationToken cancellationToken = default)
+        public Task<UserManagementDetail?> UpdateRoleAsync(long id, string roleName, string? shopName, CancellationToken cancellationToken = default)
         {
             var idx = _users.FindIndex(u => u.Id == id);
             if (idx == -1) return Task.FromResult<UserManagementDetail?>(null);
 
             var existing = _users[idx];
-            var updated = existing with { Role = roleName, UpdatedAtUtc = DateTimeOffset.UtcNow };
+            var updated = existing with { Role = roleName, ShopName = shopName, UpdatedAtUtc = DateTimeOffset.UtcNow };
             _users[idx] = updated;
             return Task.FromResult<UserManagementDetail?>(updated);
         }

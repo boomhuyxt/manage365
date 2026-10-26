@@ -26,9 +26,9 @@
   <body class="bg-light-cream min-vh-100 pb-4">
     <!-- TOP NAVIGATION BAR -->
         <nav class="app-header" aria-label="Điều hướng chính">
-      <a class="app-brand" href="/" aria-label="Retail365 - trang chấm công"><span class="app-brand-mark">R</span><span>Retail365</span><span class="app-branch">Chi nhánh Q1 - 2104</span></a>
+      <a class="app-brand" href="/" aria-label="Retail365 - trang chấm công"><span class="app-brand-mark">R</span><span>Retail365</span><span class="app-branch" data-owner-shop hidden></span></a>
       <div class="app-header-right">
-        <div class="app-nav-links"><a class="is-current" data-page="qr" href="/"><i class="fa-solid fa-qrcode"></i> Điểm danh QR</a><a data-page="schedule" href="/Schedule"><i class="fa-solid fa-calendar-days"></i> Phân ca &amp; nhân sự</a><a data-page="leave" href="/LeaveRequests"><i class="fa-solid fa-calendar-check"></i> Duyệt nghỉ phép</a></div>
+        <div class="app-nav-links"><a class="is-current" data-page="qr" href="/"><i class="fa-solid fa-qrcode"></i> Điểm danh QR</a><a data-page="schedule" href="/Schedule"><i class="fa-solid fa-calendar-days"></i> Phân ca &amp; nhân sự</a><a data-page="leave" href="/LeaveRequests"><i class="fa-solid fa-calendar-check"></i> Duyệt nghỉ phép</a><a data-page="admin" data-admin-only hidden href="/AdminUsers">Quản trị quyền</a></div>
         <div class="app-account" aria-label="Tài khoản đang đăng nhập"><span id="accountAvatar" class="app-account-avatar" aria-hidden="true">…</span><span class="app-account-copy"><span id="accountName" class="app-account-name">Đang tải tài khoản…</span><span id="accountRole" class="app-account-role">Đang xác thực</span></span></div>
         <button id="logoutButton" type="button" class="app-logout"><i class="fa-solid fa-arrow-right-from-bracket"></i> Đăng xuất</button>
       </div>
@@ -36,7 +36,7 @@
 
     <div class="container-fluid px-4">
       <!-- HEADER BAR: THÔNG TIN CHI NHÁNH & CA LÀM VIỆC & ĐỒNG HỒ -->
-      <div class="row g-3 mb-3 align-items-center">
+      <div class="row g-3 mb-3 align-items-center" data-owner-only>
         <div class="col-md-5">
           <div
             class="bg-white p-3 rounded-4 border d-flex align-items-center gap-3 shadow-sm"
@@ -90,7 +90,7 @@
       <!-- MAIN CONTENT ROW -->
       <div class="row g-3">
         <!-- CỘT TRÁI: MÃ QR ĐIỂM DANH -->
-        <div class="col-lg-6">
+        <div class="col-lg-6" data-owner-only>
           <div
             class="bg-white rounded-4 border p-4 shadow-sm h-100 d-flex flex-column justify-content-between"
           >
@@ -214,7 +214,7 @@
         </div>
 
         <!-- CỘT PHẢI: XỬ LÝ ĐỘNG THEO ROLE -->
-        <div class="col-lg-6">
+        <div id="roleSummaryColumn" class="col-lg-6">
           <div
             class="bg-white rounded-4 border p-4 shadow-sm h-100 d-flex flex-column justify-content-between"
           >

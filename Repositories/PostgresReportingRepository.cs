@@ -2,6 +2,7 @@ using manage365.Routes.API.Reporting;
 using manage365.Routes.API.Attendance;
 using Microsoft.Extensions.Options;
 using Npgsql;
+using NpgsqlTypes;
 
 namespace manage365.Repositories.Reporting;
 
@@ -120,8 +121,8 @@ public sealed class PostgresReportingRepository(
         command.CommandTimeout = 15;
         command.Parameters.AddWithValue("fromDate", fromDate);
         command.Parameters.AddWithValue("toDate", toDate);
-        command.Parameters.AddWithValue("employeeId", (object?)employeeId ?? DBNull.Value);
-        command.Parameters.AddWithValue("departmentId", (object?)departmentId ?? DBNull.Value);
+        command.Parameters.AddWithValue("employeeId", NpgsqlDbType.Bigint, (object?)employeeId ?? DBNull.Value);
+        command.Parameters.AddWithValue("departmentId", NpgsqlDbType.Bigint, (object?)departmentId ?? DBNull.Value);
         command.Parameters.AddWithValue("nowLocal", GetBusinessLocalNow());
         var buckets = new List<AttendanceStatisticsBucketDto>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);

@@ -3,6 +3,7 @@ using manage365.Routes.API.Auth;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace manage365.Tests;
@@ -15,7 +16,8 @@ public sealed class AuthRefreshTokenTests
         "Nguyen Van A",
         "hashed-password",
         AppRoles.Employee,
-        DateTimeOffset.UtcNow);
+        DateTimeOffset.UtcNow,
+        null);
 
     private readonly IOptions<JwtOptions> _jwtOptions = Options.Create(new JwtOptions
     {
@@ -53,7 +55,7 @@ public sealed class AuthRefreshTokenTests
         var passwordHasher = new FakePasswordHasher(verifyResult: true);
         var tokenService = new JwtTokenService(_jwtOptions);
 
-        var controller = new AuthController(userRepo, passwordHasher, tokenService, tokenRepo, _jwtOptions)
+        var controller = new AuthController(userRepo, passwordHasher, tokenService, tokenRepo, _jwtOptions, new ConfigurationBuilder().Build())
         {
             ControllerContext = new ControllerContext
             {
@@ -91,7 +93,7 @@ public sealed class AuthRefreshTokenTests
 
         await tokenRepo.SaveRefreshTokenAsync(TestUser.Id, tokenHash, initialExpiresAt);
 
-        var controller = new AuthController(userRepo, passwordHasher, tokenService, tokenRepo, _jwtOptions);
+        var controller = new AuthController(userRepo, passwordHasher, tokenService, tokenRepo, _jwtOptions, new ConfigurationBuilder().Build());
 
         var result = await controller.Refresh(new RefreshTokenRequest
         {
@@ -115,7 +117,7 @@ public sealed class AuthRefreshTokenTests
         var tokenService = new JwtTokenService(_jwtOptions);
         var passwordHasher = new FakePasswordHasher(verifyResult: true);
 
-        var controller = new AuthController(userRepo, passwordHasher, tokenService, tokenRepo, _jwtOptions);
+        var controller = new AuthController(userRepo, passwordHasher, tokenService, tokenRepo, _jwtOptions, new ConfigurationBuilder().Build());
 
         var result = await controller.Refresh(new RefreshTokenRequest
         {
@@ -139,7 +141,7 @@ public sealed class AuthRefreshTokenTests
         var tokenHash = tokenService.HashRefreshToken(rawRefreshToken);
         await tokenRepo.SaveRefreshTokenAsync(TestUser.Id, tokenHash, DateTimeOffset.UtcNow.AddDays(30));
 
-        var controller = new AuthController(userRepo, passwordHasher, tokenService, tokenRepo, _jwtOptions);
+        var controller = new AuthController(userRepo, passwordHasher, tokenService, tokenRepo, _jwtOptions, new ConfigurationBuilder().Build());
 
         var result = await controller.Revoke(new RevokeTokenRequest
         {

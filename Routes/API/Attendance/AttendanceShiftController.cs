@@ -180,6 +180,38 @@ public sealed class AttendanceShiftController(
         return Ok(snapshot);
     }
 
+    [HttpGet("admin/history")]
+    [Authorize(Roles = AppRoles.Managers)]
+    [EnableRateLimiting("reporting")]
+    [ProducesResponseType<AdminAttendanceHistoryPageDto>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<AdminAttendanceHistoryPageDto>> GetAdminHistory(
+        [FromQuery] DateOnly fromDate,
+        [FromQuery] DateOnly toDate,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        CancellationToken cancellationToken = default)
+    {
+        if (fromDate == DateOnly.MinValue || toDate == DateOnly.MinValue || fromDate > toDate ||
+            toDate.DayNumber - fromDate.DayNumber >= 366)
+        {
+            return BadRequest(new ProblemDetails
+            {
+                Status = StatusCodes.Status400BadRequest,
+                Title = "Khoảng ngày chấm công không hợp lệ; tối đa 366 ngày.",
+                Extensions = { ["code"] = "attendance_history_range_invalid" }
+            });
+        }
+
+        var history = await shiftRepository.GetAdminAttendanceHistoryAsync(
+            fromDate,
+            toDate,
+            Math.Clamp(page, 1, 2000),
+            Math.Clamp(pageSize, 1, 100),
+            cancellationToken);
+        return Ok(history);
+    }
+
     private bool TryGetUserId(out long userId)
     {
         var subject = User.FindFirst(JwtRegisteredClaimNames.Sub)?.Value;

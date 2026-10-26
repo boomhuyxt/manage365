@@ -43,8 +43,7 @@ CREATE TABLE IF NOT EXISTS public.vi_tri_cham_cong (
     CONSTRAINT ux_vi_tri_cham_cong_action UNIQUE (id_cham_cong, hanh_dong)
 );
 
-CREATE INDEX IF NOT EXISTS ix_vi_tri_cham_cong_attendance
-    ON public.vi_tri_cham_cong (id_cham_cong, hanh_dong);
+-- ux_vi_tri_cham_cong_action already indexes (id_cham_cong, hanh_dong).
 
 CREATE INDEX IF NOT EXISTS ix_vi_tri_cham_cong_location
     ON public.vi_tri_cham_cong USING GIST (location);

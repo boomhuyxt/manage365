@@ -6,4 +6,5 @@ public sealed record User(
     string DisplayName,
     string PasswordHash,
     string Role,
-    DateTimeOffset CreatedAtUtc);
+    DateTimeOffset CreatedAtUtc,
+    string? ShopName = null);

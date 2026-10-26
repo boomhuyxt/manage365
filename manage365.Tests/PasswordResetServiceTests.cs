@@ -14,7 +14,8 @@ public sealed class PasswordResetServiceTests
         "Retail Employee",
         "old-hash",
         AppRoles.Employee,
-        DateTimeOffset.UtcNow);
+        DateTimeOffset.UtcNow,
+        null);
 
     [Fact]
     public async Task RequestCode_DoesNotSendEmailForUnknownAccount()
