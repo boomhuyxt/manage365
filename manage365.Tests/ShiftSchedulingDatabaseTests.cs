@@ -65,6 +65,39 @@ public sealed class ShiftSchedulingDatabaseTests
     }
 
     [Fact(Skip = "Set SHIFT_TEST_CONNECTION to the isolated database", SkipUnless = nameof(DatabaseConfigured))]
+    public async Task CancelledShiftName_CanBeReassignedToAnotherEmployee_AndSharedByStaff()
+    {
+        await using var source = await Database();
+        var repo = new PostgresShiftSchedulingRepository(source);
+
+        await using (var legacy = source.CreateCommand("""
+            ALTER TABLE public.ca_lam
+            ADD CONSTRAINT uq_ca_lam_ngay_loai UNIQUE (ngay_lam, loai_ca);
+            """))
+        {
+            await legacy.ExecuteNonQueryAsync(Ct);
+        }
+
+        // Startup removes only the obsolete date/name uniqueness rule.
+        await repo.EnsureTablesAndSeedAsync(Ct);
+
+        var first = await repo.AssignShiftAsync(Custom(employee: 101, start: "12:00", end: "16:00"), Ct);
+        await repo.DeleteAssignmentAsync(first.AssignmentId, Ct);
+        var reassigned = await repo.AssignShiftAsync(Custom(employee: 102, start: "12:00", end: "16:00"), Ct);
+
+        Assert.Equal(first.ShiftName, reassigned.ShiftName);
+        Assert.Equal("Cancelled", (await repo.GetAssignmentByIdAsync(first.AssignmentId, Ct))!.Status);
+
+        var teammate = await repo.AssignShiftAsync(Custom(employee: 101, start: "12:00", end: "16:00"), Ct);
+        Assert.Equal(reassigned.ShiftName, teammate.ShiftName);
+        Assert.Equal("12:00", reassigned.StartTime);
+        Assert.Equal("12:00", teammate.StartTime);
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            repo.AssignShiftAsync(Custom(employee: 101, start: "14:00", end: "18:00"), Ct));
+    }
+
+    [Fact(Skip = "Set SHIFT_TEST_CONNECTION to the isolated database", SkipUnless = nameof(DatabaseConfigured))]
     public async Task RealSql_RoundTrip_CustomShiftAndUnassignedEmployees()
     {
         await using var source = await Database(); var repo = new PostgresShiftSchedulingRepository(source);

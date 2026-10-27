@@ -28,8 +28,8 @@ public sealed class LeaveRequestsController(
     [ProducesResponseType<LeaveOptionsResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<LeaveOptionsResponse>> GetOptions(CancellationToken cancellationToken)
     {
-        var isAdmin = User.IsInRole(AppRoles.Admin);
-        var options = await repository.GetOptionsAsync(isAdmin, cancellationToken);
+        var canReview = User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Manager);
+        var options = await repository.GetOptionsAsync(canReview, cancellationToken);
         return Ok(options);
     }
 
@@ -136,8 +136,8 @@ public sealed class LeaveRequestsController(
             });
         }
 
-        var isAdmin = User.IsInRole(AppRoles.Admin);
-        if (!isAdmin && detail.Request.EmployeeId != userId)
+        var canReview = User.IsInRole(AppRoles.Admin) || User.IsInRole(AppRoles.Manager);
+        if (!canReview && detail.Request.EmployeeId != userId)
         {
             // Do not leak existence to unauthorized employees
             return NotFound(new ProblemDetails
@@ -172,10 +172,10 @@ public sealed class LeaveRequestsController(
     }
 
     /// <summary>
-    /// (Admin) Xem danh sách tất cả đơn nghỉ phép trong toàn hệ thống kèm bộ lọc
+    /// (Admin/Chủ cửa hàng) Xem danh sách đơn nghỉ phép kèm bộ lọc
     /// </summary>
     [HttpGet]
-    [Authorize(Roles = AppRoles.Admin)]
+    [Authorize(Roles = AppRoles.Managers)]
     [ProducesResponseType<PagedLeaveRequestsResponse>(StatusCodes.Status200OK)]
     public async Task<ActionResult<PagedLeaveRequestsResponse>> GetAllAdmin(
         [FromQuery] string? status,
@@ -205,10 +205,10 @@ public sealed class LeaveRequestsController(
     }
 
     /// <summary>
-    /// (Admin) Xem trước dữ liệu xét duyệt trước khi thực hiện Approve
+    /// (Admin/Chủ cửa hàng) Xem trước dữ liệu xét duyệt trước khi thực hiện Approve
     /// </summary>
     [HttpGet("{id:long}/review-preview")]
-    [Authorize(Roles = AppRoles.Admin)]
+    [Authorize(Roles = AppRoles.Managers)]
     [ProducesResponseType<LeaveRequestPreviewResponse>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status409Conflict)]
@@ -222,10 +222,10 @@ public sealed class LeaveRequestsController(
     }
 
     /// <summary>
-    /// (Admin) Duyệt đơn nghỉ phép (chốt snapshot ca, phân loại phương án lương)
+    /// (Admin/Chủ cửa hàng) Duyệt đơn nghỉ phép (chốt snapshot ca, phân loại phương án lương)
     /// </summary>
     [HttpPost("{id:long}/approve")]
-    [Authorize(Roles = AppRoles.Admin)]
+    [Authorize(Roles = AppRoles.Managers)]
     [ProducesResponseType<LeaveRequestDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
@@ -245,10 +245,10 @@ public sealed class LeaveRequestsController(
     }
 
     /// <summary>
-    /// (Admin) Từ chối đơn nghỉ phép (bắt buộc nêu rõ lý do)
+    /// (Admin/Chủ cửa hàng) Từ chối đơn nghỉ phép (bắt buộc nêu rõ lý do)
     /// </summary>
     [HttpPost("{id:long}/reject")]
-    [Authorize(Roles = AppRoles.Admin)]
+    [Authorize(Roles = AppRoles.Managers)]
     [ProducesResponseType<LeaveRequestDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status403Forbidden)]
@@ -268,10 +268,10 @@ public sealed class LeaveRequestsController(
     }
 
     /// <summary>
-    /// (Admin) Thu hồi đơn đã duyệt trước khi khoảng nghỉ bắt đầu
+    /// (Admin/Chủ cửa hàng) Thu hồi đơn đã duyệt trước khi khoảng nghỉ bắt đầu
     /// </summary>
     [HttpPost("{id:long}/revoke")]
-    [Authorize(Roles = AppRoles.Admin)]
+    [Authorize(Roles = AppRoles.Managers)]
     [ProducesResponseType<LeaveRequestDto>(StatusCodes.Status200OK)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ProblemDetails>(StatusCodes.Status404NotFound)]

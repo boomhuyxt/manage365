@@ -5,6 +5,7 @@
   const state = {
     user: null,
     isAdmin: false,
+    canReview: false,
     items: [],
     page: 1,
     currentActionId: null,
@@ -58,7 +59,9 @@
 
     if (!res.ok) {
       const errMessage = payload?.detail || payload?.title || (res.status === 403 ? "Bạn không có quyền thực hiện thao tác này." : `Lỗi ${res.status}`);
-      throw new Error(errMessage);
+      const error = new Error(errMessage);
+      error.status = res.status;
+      throw error;
     }
 
     return payload;
@@ -133,6 +136,7 @@
       if (rawUser) {
         state.user = JSON.parse(rawUser);
         state.isAdmin = (state.user.role || "").toLowerCase() === "admin";
+        state.canReview = state.isAdmin || (state.user.role || "").toLowerCase() === "manager";
       }
     } catch {}
 
@@ -180,7 +184,7 @@
     $("nextPage").disabled = true;
 
     try {
-      const endpoint = state.isAdmin ? `/api/leave-requests?${params.toString()}` : `/api/leave-requests/me?${params.toString()}`;
+      const endpoint = state.canReview ? `/api/leave-requests?${params.toString()}` : `/api/leave-requests/me?${params.toString()}`;
       const data = await api(endpoint);
 
       setApiStatus(true);
@@ -191,7 +195,8 @@
       renderTable(state.items);
       updateStats(state.items);
     } catch (err) {
-      setApiStatus(false);
+      // An HTTP error (including 403) proves that the API server responded.
+      setApiStatus(Number.isInteger(err.status));
       message("pageMessage", err.message);
     } finally {
       $("loadingState").classList.add("d-none");
@@ -229,12 +234,12 @@
 
       let actionHtml = "";
       if (req.status === "Pending") {
-        if (state.isAdmin) {
+        if (state.canReview) {
           actionHtml = `<button class="btn btn-orange btn-review" data-id="${req.id}">Xét duyệt đơn</button>`;
         } else if (state.user && state.user.id === req.employeeId) {
           actionHtml = `<button class="btn btn-sm btn-outline-danger btn-cancel" data-id="${req.id}" data-version="${req.version}">Hủy đơn</button>`;
         }
-      } else if (req.status === "Approved" && state.isAdmin) {
+      } else if (req.status === "Approved" && state.canReview) {
         actionHtml = `<button class="btn btn-sm btn-outline-secondary btn-revoke" data-id="${req.id}" data-version="${req.version}">Thu hồi</button>`;
       }
 

@@ -195,7 +195,8 @@
   function queueCoverage() {
     clearTimeout(coverageTimer); const request = ++coverageRequest;
     $("selectedEmployeeCount").textContent = `Đã chọn ${selectedEmployees().length} nhân viên`;
-    $("coveragePreview").textContent = "Đang cập nhật số người…";
+    // Keep the preview's height stable while refreshing so the modal scroll position does not jump.
+    $("coveragePreview").setAttribute("aria-busy", "true");
     coverageTimer = setTimeout(() => updateCoverage(request), 300);
   }
   async function updateCoverage(request) {
@@ -206,6 +207,8 @@
       const data = await api("/api/shift-assignments/coverage", "POST", { assignments: pending });
       if (request !== coverageRequest) return;
       const preview = $("coveragePreview");
+      const modalBody = $("shiftModal").querySelector(".modal-body");
+      const scrollTop = modalBody.scrollTop;
       preview.replaceChildren(node("strong", "Nhân viên cùng khung giờ · hiện có → sau khi lưu"));
       for (const segment of data.segments) {
         const names = segment.projectedEmployeeIds.map(id => state.employees.find(e => e.id === id)?.displayName || `NV-${id}`).join(", ");
@@ -214,7 +217,15 @@
         preview.append(detail);
       }
       preview.append(node("small", "Số dự kiến tại lúc tải. Nhiều nhân viên cùng giờ vẫn được lưu.", "text-secondary"));
-    } catch (error) { if (request === coverageRequest) $("coveragePreview").textContent = `Chưa có thống kê: ${error.message}`; }
+      preview.setAttribute("aria-busy", "false");
+      requestAnimationFrame(() => { modalBody.scrollTop = scrollTop; });
+    } catch (error) {
+      if (request === coverageRequest) {
+        const preview = $("coveragePreview");
+        preview.setAttribute("aria-busy", "false");
+        preview.textContent = `Chưa có thống kê: ${error.message}`;
+      }
+    }
   }
   $("addIntervalButton").addEventListener("click", () => {
     const row = node("div", null, "d-flex gap-2 align-items-center flex-wrap mb-2");
