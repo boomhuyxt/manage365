@@ -26,7 +26,8 @@ public sealed class PostgresUserRepository(NpgsqlDataSource dataSource) : IUserR
     {
         const string sql = """
             SELECT nv.id, nv.email, nv.ho_ten, nv.mat_khau,
-                   COALESCE(vt.ten_vai_tro, 'Employee'), nv.created_at, nv.ten_cua_hang
+                   COALESCE(vt.ten_vai_tro, 'Employee'), nv.created_at, nv.ten_cua_hang,
+                   COALESCE(nv.trang_thai, 'Active')
             FROM public.nhan_vien AS nv
             LEFT JOIN public.vai_tro AS vt ON vt.id = nv.id_vai_tro
             WHERE nv.email = @email
@@ -46,7 +47,8 @@ public sealed class PostgresUserRepository(NpgsqlDataSource dataSource) : IUserR
     {
         const string sql = """
             SELECT nv.id, nv.email, nv.ho_ten, nv.mat_khau,
-                   COALESCE(vt.ten_vai_tro, 'Employee'), nv.created_at, nv.ten_cua_hang
+                   COALESCE(vt.ten_vai_tro, 'Employee'), nv.created_at, nv.ten_cua_hang,
+                   COALESCE(nv.trang_thai, 'Active')
             FROM public.nhan_vien AS nv
             LEFT JOIN public.vai_tro AS vt ON vt.id = nv.id_vai_tro
             WHERE nv.id = @id
@@ -77,7 +79,8 @@ public sealed class PostgresUserRepository(NpgsqlDataSource dataSource) : IUserR
             SELECT nextval('public.nhan_vien_id_seq'), id, @displayName, @email,
                    @passwordHash, @employeeType, 0
             FROM employee_role
-            RETURNING id, email, ho_ten, mat_khau, @role, created_at, ten_cua_hang;
+            RETURNING id, email, ho_ten, mat_khau, @role, created_at, ten_cua_hang,
+                      COALESCE(trang_thai, 'Active');
             """;
 
         await using var command = dataSource.CreateCommand(sql);
@@ -107,5 +110,6 @@ public sealed class PostgresUserRepository(NpgsqlDataSource dataSource) : IUserR
         reader.GetString(3),
         reader.GetString(4),
         reader.GetFieldValue<DateTimeOffset>(5),
-        reader.IsDBNull(6) ? null : reader.GetString(6));
+        reader.IsDBNull(6) ? null : reader.GetString(6),
+        reader.IsDBNull(7) ? "Active" : reader.GetString(7));
 }

@@ -167,7 +167,9 @@ builder.Services
                 {
                     var userRepository = context.HttpContext.RequestServices.GetRequiredService<IUserRepository>();
                     var currentUser = await userRepository.FindByIdAsync(userId, context.HttpContext.RequestAborted);
-                    if (currentUser is null || !string.Equals(currentUser.Role, tokenRole, StringComparison.OrdinalIgnoreCase))
+                    if (currentUser is null ||
+                        !string.Equals(currentUser.Role, tokenRole, StringComparison.OrdinalIgnoreCase) ||
+                        !string.Equals(currentUser.Status, "Active", StringComparison.OrdinalIgnoreCase))
                     {
                         context.Fail("The account role has changed. Sign in again to continue.");
                     }

@@ -100,6 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!response.ok) {
       const error = new Error(getErrorMessage(payload, "Không thể xác thực tài khoản."));
       error.status = response.status;
+      error.code = payload?.code || payload?.extensions?.code;
       throw error;
     }
 
@@ -288,7 +289,9 @@ document.addEventListener("DOMContentLoaded", () => {
       saveSession(authResponse, remember);
       redirectAfterAuth(authResponse);
     } catch (error) {
-      const message = error.status === 401
+      const message = error.code === "account_locked"
+        ? error.message
+        : error.status === 401
         ? "Email hoặc mật khẩu không chính xác."
         : error.status === 429
           ? "Bạn đăng nhập quá nhiều lần. Vui lòng thử lại sau."
