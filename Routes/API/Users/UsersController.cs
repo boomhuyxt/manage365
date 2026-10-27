@@ -305,6 +305,15 @@ public sealed class UsersController(
         [FromBody] UpdateUserStatusRequest request,
         CancellationToken cancellationToken)
     {
+        var requestedStatus = request.Status.Trim();
+        if (!string.Equals(requestedStatus, "Active", StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(requestedStatus, "Inactive", StringComparison.OrdinalIgnoreCase))
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest,
+                title: "Trạng thái chỉ được phép là Active hoặc Inactive.",
+                extensions: new Dictionary<string, object?> { ["code"] = "invalid_account_status" });
+        }
+
         var user = await userRepository.GetUserByIdAsync(id, cancellationToken);
         if (user is null)
         {
@@ -319,6 +328,13 @@ public sealed class UsersController(
             return RootAccountProtected("Không thể vô hiệu hóa tài khoản ROOT Admin.", "root_admin_immutable");
         }
 
+        if (GetCurrentUserId() == id)
+        {
+            return Problem(statusCode: StatusCodes.Status400BadRequest,
+                title: "Bạn không thể khóa tài khoản đang đăng nhập.",
+                extensions: new Dictionary<string, object?> { ["code"] = "cannot_change_own_status" });
+        }
+
         if (!IsCurrentUserRootAdmin() && string.Equals(user.Role, AppRoles.Admin, StringComparison.OrdinalIgnoreCase))
         {
             return Problem(statusCode: StatusCodes.Status403Forbidden,
@@ -326,7 +342,9 @@ public sealed class UsersController(
                 extensions: new Dictionary<string, object?> { ["code"] = "admin_status_change_forbidden" });
         }
 
-        var updated = await userRepository.UpdateStatusAsync(id, request.Status.Trim(), cancellationToken);
+        var updated = await userRepository.UpdateStatusAsync(id,
+            string.Equals(requestedStatus, "Active", StringComparison.OrdinalIgnoreCase) ? "Active" : "Inactive",
+            cancellationToken);
         if (updated is null)
         {
             return Problem(

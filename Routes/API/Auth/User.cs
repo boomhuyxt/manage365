@@ -7,4 +7,5 @@ public sealed record User(
     string PasswordHash,
     string Role,
     DateTimeOffset CreatedAtUtc,
-    string? ShopName = null);
+    string? ShopName = null,
+    string Status = "Active");

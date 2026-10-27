@@ -65,6 +65,12 @@
     return user.role === "Employee";
   }
 
+  function canManageStatus(user) {
+    if (user.isRootAdmin || String(user.id) === String(state.currentUser?.id)) return false;
+    if (state.currentUser?.isRootAdmin) return true;
+    return user.role !== "Admin";
+  }
+
   function protectedRoleLabel(user) {
     if (user.isRootAdmin) return "ROOT được bảo vệ";
     if (user.role === "Admin") return "Chỉ ROOT được đổi Admin";
@@ -80,9 +86,17 @@
     tbody.innerHTML = items.map(user => {
       const initials = (user.displayName || user.email || "U").trim().split(/\s+/).slice(0, 2).map(part => part[0]).join("").toUpperCase();
       const status = (user.status || "Active").toLowerCase();
-      const action = canManageRole(user)
-        ? `<button class="btn btn-sm admin-change-role" type="button" data-change-role="${user.id}">Đổi vai trò</button>`
-        : `<span class="admin-row-lock">${escapeHtml(protectedRoleLabel(user))}</span>`;
+      const actions = [];
+      if (canManageRole(user)) {
+        actions.push(`<button class="btn btn-sm admin-change-role" type="button" data-change-role="${user.id}">Đổi vai trò</button>`);
+      }
+      if (canManageStatus(user)) {
+        const isActive = status === "active";
+        actions.push(`<button class="btn btn-sm admin-toggle-status ${isActive ? "is-lock" : "is-unlock"}" type="button" data-toggle-status="${user.id}" data-next-status="${isActive ? "Inactive" : "Active"}">${isActive ? "Khóa tài khoản" : "Mở khóa"}</button>`);
+      }
+      const action = actions.length
+        ? actions.join("")
+        : `<span class="admin-row-lock">${escapeHtml(user.isRootAdmin ? "ROOT được bảo vệ" : String(user.id) === String(state.currentUser?.id) ? "Tài khoản đang dùng" : protectedRoleLabel(user))}</span>`;
       return `<tr>
         <td><div class="admin-person"><span class="admin-person-avatar" aria-hidden="true">${escapeHtml(initials)}</span><span><strong>${escapeHtml(user.displayName)}</strong><small>${escapeHtml(user.email)}</small></span></div></td>
         <td><span class="admin-role-badge ${roleClass(user.role)}">${escapeHtml(roleText(user.role))}</span>${user.isRootAdmin ? '<span class="admin-role-badge role-root">ROOT</span>' : ""}${user.role === "Manager" && user.shopName ? `<small class="admin-shop-name">${escapeHtml(user.shopName)}</small>` : ""}</td>
@@ -179,12 +193,39 @@
     }
   }
 
+  async function toggleUserStatus(button) {
+    const user = state.users.find(item => String(item.id) === button.dataset.toggleStatus);
+    if (!user || !canManageStatus(user)) return;
+    const nextStatus = button.dataset.nextStatus;
+    const locking = nextStatus === "Inactive";
+    const action = locking ? "khóa" : "mở khóa";
+    if (!window.confirm(`Bạn có chắc muốn ${action} tài khoản ${user.displayName} (${user.email})?${locking ? " Tài khoản sẽ không thể đăng nhập hoặc tiếp tục dùng API." : ""}`)) return;
+
+    button.disabled = true;
+    try {
+      await api(`/api/users/${user.id}/status`, {
+        method: "PUT",
+        body: JSON.stringify({ status: nextStatus })
+      });
+      await loadUsers();
+      setMessage(`Đã ${action} tài khoản ${user.displayName}.`, false);
+    } catch (error) {
+      setMessage(error.message);
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   document.addEventListener("DOMContentLoaded", async () => {
     byId("adminUsersBody").addEventListener("click", event => {
       const button = event.target.closest("[data-change-role]");
-      if (!button) return;
-      const user = state.users.find(item => String(item.id) === button.dataset.changeRole);
-      if (user) openRoleDialog(user);
+      if (button) {
+        const user = state.users.find(item => String(item.id) === button.dataset.changeRole);
+        if (user) openRoleDialog(user);
+        return;
+      }
+      const statusButton = event.target.closest("[data-toggle-status]");
+      if (statusButton) toggleUserStatus(statusButton);
     });
     byId("userSearch").addEventListener("input", () => {
       clearTimeout(state.timer);

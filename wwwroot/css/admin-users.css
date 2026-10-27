@@ -51,6 +51,12 @@
 .admin-change-role { min-width:120px; border:1px solid #e3a556; border-radius:8px; background:#fffaf4; color:#a65100; font-weight:700; }
 .admin-change-role:hover:not(:disabled) { border-color:#e27a00; background:#fff1de; }
 .admin-change-role:disabled { border-color:#e6e7e9; color:#9da2aa; background:#f6f6f6; cursor:not-allowed; }
+.admin-toggle-status { min-width:112px; border-radius:8px; font-weight:700; }
+.admin-toggle-status.is-lock { border:1px solid #e6b2ac; color:#a43f35; background:#fff7f6; }
+.admin-toggle-status.is-lock:hover:not(:disabled) { border-color:#c85b4f; color:#8d2f27; background:#ffedeb; }
+.admin-toggle-status.is-unlock { border:1px solid #9bc9a8; color:#34734a; background:#f3faf5; }
+.admin-toggle-status.is-unlock:hover:not(:disabled) { border-color:#529a66; color:#245c38; background:#e8f5ec; }
+.admin-toggle-status:disabled { opacity:.55; cursor:wait; }
 .admin-row-lock { color:#969ca5; font-size:11px; white-space:nowrap; }
 .admin-state { padding:52px 16px; color:#858b94; text-align:center; font-size:13px; }
 .admin-pagination { display:flex; align-items:center; justify-content:space-between; padding:14px 20px; border-top:1px solid #ececef; color:#777f89; font-size:12px; }

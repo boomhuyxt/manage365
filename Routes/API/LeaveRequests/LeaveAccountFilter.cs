@@ -23,10 +23,15 @@ public sealed class LeaveAccountFilter(NpgsqlDataSource source) : IAsyncActionFi
             """);
         command.Parameters.AddWithValue("id", id);
         await using var reader = await command.ExecuteReaderAsync(context.HttpContext.RequestAborted);
-        var adminRequired = context.ActionDescriptor.EndpointMetadata.OfType<AuthorizeAttribute>().Any(a => a.Roles == "Admin");
+        var requiredRoles = context.ActionDescriptor.EndpointMetadata
+            .OfType<AuthorizeAttribute>()
+            .SelectMany(attribute => (attribute.Roles ?? string.Empty)
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            .ToArray();
         if (!await reader.ReadAsync(context.HttpContext.RequestAborted) ||
             !string.Equals(reader.GetString(0), "Active", StringComparison.OrdinalIgnoreCase) ||
-            (adminRequired && (reader.IsDBNull(1) || reader.GetString(1) != "Admin")))
+            (requiredRoles.Length > 0 && (reader.IsDBNull(1) ||
+                !requiredRoles.Contains(reader.GetString(1), StringComparer.OrdinalIgnoreCase))))
         {
             context.Result = new ObjectResult(new ProblemDetails
             {

@@ -53,7 +53,7 @@
         </section>
 
         <section class="admin-table-card" aria-label="Danh sách tài khoản">
-            <div class="admin-table-heading"><div><h2>Danh sách tài khoản</h2><p>Thay đổi vai trò có hiệu lực ở lần gọi API tiếp theo.</p></div><span id="adminApiState" class="admin-api-state"><i></i> Đang kết nối</span></div>
+            <div class="admin-table-heading"><div><h2>Danh sách tài khoản</h2><p>Quản lý vai trò và trạng thái truy cập của từng tài khoản.</p></div><span id="adminApiState" class="admin-api-state"><i></i> Đang kết nối</span></div>
             <div id="adminLoading" class="admin-state"><span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Đang tải tài khoản…</div>
             <div id="adminEmpty" class="admin-state" hidden>Không tìm thấy tài khoản phù hợp với bộ lọc.</div>
             <div class="admin-table-scroll">
@@ -64,7 +64,7 @@
             </div>
             <footer class="admin-pagination"><span id="adminPageInfo">Trang 1</span><div><button id="previousUsers" type="button" class="btn btn-outline-secondary" disabled>Trước</button><button id="nextUsers" type="button" class="btn btn-outline-secondary" disabled>Tiếp</button></div></footer>
         </section>
-        <p class="admin-footnote">Mọi thay đổi quyền được máy chủ kiểm tra lại. Admin thường chỉ được nâng User lên Chủ shop; ROOT Admin có thể gán mọi vai trò và hạ cấp Admin.</p>
+        <p class="admin-footnote">Admin thường có thể khóa User và Chủ shop, không thể tác động lên Admin khác. ROOT Admin có thể khóa hoặc mở khóa mọi tài khoản ngoài chính ROOT Admin.</p>
     </main>
 
     <div id="roleDialog" class="role-dialog-backdrop" hidden>

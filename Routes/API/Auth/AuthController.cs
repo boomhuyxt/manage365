@@ -65,6 +65,16 @@ public sealed class AuthController(
             });
         }
 
+        if (!IsActive(user))
+        {
+            return Unauthorized(new ProblemDetails
+            {
+                Status = StatusCodes.Status401Unauthorized,
+                Title = "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ admin qua email retailmanagement@gmail.com để được hỗ trợ.",
+                Extensions = new Dictionary<string, object?> { ["code"] = "account_locked" }
+            });
+        }
+
         var response = await CreateAuthResponseAsync(user, cancellationToken);
         return Ok(response);
     }
@@ -107,6 +117,17 @@ public sealed class AuthController(
             {
                 Status = StatusCodes.Status401Unauthorized,
                 Title = "User not found."
+            });
+        }
+
+        if (!IsActive(user))
+        {
+            await refreshTokenRepository.RevokeTokenAsync(tokenHash, cancellationToken);
+            return Unauthorized(new ProblemDetails
+            {
+                Status = StatusCodes.Status401Unauthorized,
+                Title = "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ admin qua email retailmanagement@gmail.com để được hỗ trợ.",
+                Extensions = new Dictionary<string, object?> { ["code"] = "account_locked" }
             });
         }
 
@@ -155,7 +176,7 @@ public sealed class AuthController(
         }
 
         var current = await userRepository.FindByIdAsync(userId, cancellationToken);
-        if (current is null) return Unauthorized();
+        if (current is null || !IsActive(current)) return Unauthorized();
         return Ok(new UserResponse(current.Id, current.Email, current.DisplayName, current.Role, IsRootAccount(current.Email), IsRootAdminConfigured, current.ShopName));
     }
 
@@ -194,6 +215,9 @@ public sealed class AuthController(
     }
 
     private bool IsRootAdminConfigured => !string.IsNullOrWhiteSpace(configuration["RootAdmin:Email"]);
+
+    private static bool IsActive(User user) =>
+        string.Equals(user.Status, "Active", StringComparison.OrdinalIgnoreCase);
 
     private static string NormalizeEmail(string email) => email.Trim().ToLowerInvariant();
 }
