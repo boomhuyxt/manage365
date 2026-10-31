@@ -1,0 +1,58 @@
+<section id="blePanel" class="ble-panel mb-3" data-ble-ui-version="2" data-owner-only hidden aria-labelledby="bleHeading">
+  <div class="ble-heading">
+    <div class="d-flex align-items-center gap-3">
+      <span class="ble-icon" aria-hidden="true"><i class="fa-brands fa-bluetooth-b"></i></span>
+      <div><h2 id="bleHeading" class="h5 fw-bold mb-1">Chấm công tự động bằng BLE</h2><p class="small text-muted mb-0">Kết nối máy tính cửa hàng với điện thoại nhân viên. QR luôn sẵn sàng khi cần.</p></div>
+    </div>
+    <button id="bleRefresh" class="btn btn-light border" type="button"><i class="fa-solid fa-rotate-right me-1"></i>Làm mới BLE</button>
+  </div>
+  <div id="bleFeedback" class="alert d-none" role="status" aria-live="polite"></div>
+  <p class="small text-muted">Cài bộ quét một lần trên máy cửa hàng. Sau đó dùng công tắc Bật/Tắt; nhân viên được nhận diện tự động theo ca làm của shop.</p>
+  <div class="ble-toolbar">
+    <div class="ble-select"><label for="bleScanner" class="form-label small fw-semibold">Kiosk của cửa hàng</label><select id="bleScanner" class="form-select" disabled><option>Đang tải kiosk…</option></select></div>
+    <button id="bleCreate" class="btn btn-outline-secondary" type="button" disabled><i class="fa-solid fa-plus me-1"></i>Tạo kiosk</button>
+    <button id="bleConfigure" class="btn btn-warning-orange text-white" type="button" disabled>Kích hoạt BLE trên máy này</button>
+    <div class="form-check form-switch m-0"><input id="bleSwitch" class="form-check-input" type="checkbox" role="switch" disabled aria-describedby="bleHealthDetail" /><label class="form-check-label fw-semibold" for="bleSwitch">Bật chấm công BLE</label></div>
+    <span id="bleHealth" class="ble-health" role="status">Đang kiểm tra kết nối</span>
+  </div>
+  <p id="bleHealthDetail" class="small text-muted mb-3">Trạng thái được cập nhật từ bộ quét Windows tại cửa hàng.</p>
+  <div id="bleEmpty" class="ble-empty" hidden><i class="fa-brands fa-bluetooth-b fs-3" aria-hidden="true"></i><p class="fw-semibold mt-2 mb-1">Chưa có kiosk BLE</p><p class="small text-muted mb-0">Bấm “Tạo kiosk” để bắt đầu thiết lập chấm công tại cửa hàng.</p></div>
+  <div id="bleLive" class="ble-live" hidden>
+    <div>
+      <div class="d-flex justify-content-between align-items-center gap-2 mb-2"><h3 class="h6 fw-bold mb-0">Nhân viên &amp; tín hiệu gần đây</h3><span id="bleEmployeeCount" class="small text-muted"></span></div>
+      <div class="ble-table-scroll"><table class="table table-sm align-middle mb-0"><thead><tr><th>Nhân viên</th><th>Tín hiệu</th><th>Kết quả nhận diện</th></tr></thead><tbody id="blePresence"></tbody></table></div>
+    </div>
+    <div><h3 class="h6 fw-bold mb-2">Lượt chấm công BLE gần nhất</h3><div id="bleEvents" class="ble-event-list" aria-live="polite"></div></div>
+  </div>
+  <p class="ble-footnote mb-0">Điều kiện vào ca: có ca đúng cửa hàng, nhận diện ít nhất 20 giây, từ 5 lần đo, tín hiệu đạt ngưỡng. Có thể bấm Check-out khi còn gần kiosk. Khi mất tín hiệu đủ thời gian cấu hình và kiosk vẫn hoạt động, hệ thống tự checkout và đánh dấu cần đối soát.</p>
+</section>
+
+<div class="modal fade" id="bleCreateModal" tabindex="-1" aria-labelledby="bleCreateTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered"><form id="bleCreateForm" class="modal-content">
+    <div class="modal-header"><h2 id="bleCreateTitle" class="modal-title h5">Tạo kiosk BLE</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
+    <div class="modal-body">
+      <div id="bleCreateError" class="alert alert-danger d-none" role="alert"></div>
+      <label for="bleNewOwner" class="form-label">Cửa hàng phụ trách kiosk</label><select id="bleNewOwner" class="form-select mb-3" required></select>
+      <label for="bleNewId" class="form-label">Mã kiosk</label><input id="bleNewId" class="form-control mb-3" required maxlength="80" pattern="[A-Za-z0-9_-]+" placeholder="Ví dụ: STORE-01-KIOSK-01" />
+      <label for="bleNewStore" class="form-label">Mã cửa hàng</label><input id="bleNewStore" class="form-control" required maxlength="64" value="STORE-01" />
+      <p class="form-text">Dùng cùng mã cửa hàng đã cấu hình chấm công QR. Mã kiosk phải khác nhau giữa các máy tính.</p>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-light border" data-bs-dismiss="modal">Đóng</button><button id="bleSaveCreate" class="btn btn-warning-orange text-white" type="submit">Tạo kiosk</button></div>
+  </form></div>
+</div>
+
+<div class="modal fade" id="bleConfigModal" tabindex="-1" aria-labelledby="bleConfigTitle" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable"><div class="modal-content">
+    <div class="modal-header"><h2 id="bleConfigTitle" class="modal-title h5">Kích hoạt BLE</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
+    <div class="modal-body">
+      <div id="bleConfigFeedback" class="alert d-none" role="status" aria-live="polite"></div>
+      <div class="alert alert-info">Nhân viên được xác định tự động từ ca làm thuộc cửa hàng của kiosk. Không cần gán từng người. Ca cũ chưa có cửa hàng cần mở trong bảng phân ca và lưu lại.</div>
+      <h3 class="h6 fw-bold">Cài đặt một lần trên máy cửa hàng</h3>
+      <p>File cài đặt đã có sẵn cửa hàng và kết nối máy chủ. Bạn không cần nhập địa chỉ API hay giải nén.</p>
+      <button id="bleInstall" class="btn btn-warning-orange text-white mb-3" type="button"><i class="fa-solid fa-download me-1"></i>Tải bộ cài BLE cho Windows</button>
+      <ol class="small ps-3"><li>Mở file <strong>Retail365-BLE-Setup.exe</strong> vừa tải trên chính máy đang mở trang này.</li><li>Xác nhận cài đặt, bật Bluetooth rồi quay lại web.</li><li>Khi trạng thái là <strong>Đang quét</strong>, bạn có thể dùng công tắc Bật/Tắt BLE. Bộ quét tự chạy khi đăng nhập Windows.</li></ol>
+      <p class="small text-muted">Trạng thái trên web thuộc kiosk đang chọn; chưa kết nối không đồng nghĩa máy chưa cài. Nếu kiosk đã cài ở máy khác, chỉ tải lại khi muốn thay máy hoặc khôi phục kết nối. Tải lại bộ cài sẽ thay mã kết nối cũ.</p>
+    </div>
+    <div class="modal-footer"><button type="button" class="btn btn-light border" data-bs-dismiss="modal">Đóng</button></div>
+  </div></div>
+</div>

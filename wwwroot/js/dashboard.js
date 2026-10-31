@@ -144,6 +144,7 @@ document.addEventListener("DOMContentLoaded", () => {
     updateClock();
     window.setInterval(updateClock, 1000);
     if (!canUseOwnerUi) return;
+    document.dispatchEvent(new CustomEvent("retail365:owner-ready"));
 
     fetchAndRenderServerQR();
     loadStoreLocation();
@@ -557,10 +558,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
       adminLiveAttendanceList.innerHTML = snapshot.records.map((record) => {
         const completed = Boolean(record.checkOutAt);
-        const badgeClass = completed
+        const needsReview = record.status === "NeedsReview";
+        const badgeClass = needsReview
+          ? "bg-danger-subtle text-danger"
+          : completed
           ? "bg-success-subtle text-success"
           : "bg-warning-subtle text-warning-orange";
-        const statusText = completed
+        const statusText = needsReview
+          ? `${formatAttendanceTime(record.checkOutAt)} • Tự checkout BLE, cần đối soát`
+          : completed
           ? `${formatAttendanceTime(record.checkOutAt)} • Check-out`
           : `${formatAttendanceTime(record.checkInAt)} • Check-in`;
         const initials = String(record.employeeName ?? "NV")
@@ -588,8 +594,9 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
             </div>
             <div class="mt-2 pt-2 border-top">
-              ${renderLocationEvidence("Check-in", record.checkInLocation)}
-              ${record.checkOutAt ? renderLocationEvidence("Check-out", record.checkOutLocation) : ""}
+              ${record.attendanceMethod === "BLE" ? '<div class="extra-small text-success"><i class="fa-brands fa-bluetooth-b me-1"></i>Chấm công có xác nhận BLE tại kiosk</div>' : ""}
+              ${record.attendanceMethod !== "BLE" || record.checkInLocation ? renderLocationEvidence("Check-in", record.checkInLocation) : ""}
+              ${record.checkOutAt && (record.attendanceMethod !== "BLE" || record.checkOutLocation) ? renderLocationEvidence("Check-out", record.checkOutLocation) : ""}
             </div>
           </div>`;
       }).join("");

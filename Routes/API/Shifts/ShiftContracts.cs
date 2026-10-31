@@ -63,7 +63,8 @@ public sealed record ShiftAssignmentDto(
     string? Note,
     ShiftAttendanceBriefDto? Attendance,
     bool IsOnLeave = false,
-    string? LeaveStatus = null);
+    string? LeaveStatus = null,
+    long? ShopOwnerId = null);
 
 /// <summary>
 /// Tóm tắt trạng thái chấm công của ca làm.
@@ -86,7 +87,8 @@ public sealed record AssignShiftRequest(
     string? CustomStartTime = null,
     string? CustomEndTime = null,
     bool? IsOvernight = null,
-    string? Note = null);
+    string? Note = null,
+    long? ShopOwnerId = null);
 
 /// <summary>
 /// Yêu cầu cập nhật ca làm đã phân công.
@@ -98,7 +100,8 @@ public sealed record UpdateShiftAssignmentRequest(
     string? EndTime = null,
     bool? IsOvernight = null,
     string? Status = null,
-    string? Note = null);
+    string? Note = null,
+    long? ShopOwnerId = null);
 
 /// <summary>
 /// Yêu cầu phân ca hàng loạt (cho nhiều nhân viên hoặc nhiều ngày).

@@ -21,9 +21,24 @@
 
   <ItemGroup>
     <Compile Remove="manage365.Tests\**\*.cs" />
+    <Compile Remove="tools\BleScannerAgent\**\*.cs" />
+    <Compile Remove="artifacts\**\*.cs" />
+    <Content Remove="tools\BleScannerAgent\**\*" />
+    <Content Remove="artifacts\**\*" />
+    <EmbeddedResource Remove="tools\BleScannerAgent\**\*" />
+    <EmbeddedResource Remove="artifacts\**\*" />
+    <None Remove="tools\BleScannerAgent\**\*" />
+    <None Remove="artifacts\**\*" />
     <Content Remove="manage365.Tests\**\*" />
     <EmbeddedResource Remove="manage365.Tests\**\*" />
     <None Remove="manage365.Tests\**\*" />
+  </ItemGroup>
+
+  <ItemGroup Condition="Exists('tools/BleScannerAgent/package/BleScannerAgent.zip')">
+    <Content Include="tools/BleScannerAgent/package/BleScannerAgent.zip" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup Condition="Exists('tools/BleScannerAgent/package/Retail365-BLE-Setup.exe')">
+    <Content Include="tools/BleScannerAgent/package/Retail365-BLE-Setup.exe" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

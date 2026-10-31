@@ -13,6 +13,11 @@ namespace manage365.Routes.API.Shifts;
 [Route("api/shift-assignments")]
 public sealed class ShiftAssignmentsController(IShiftSchedulingRepository shiftRepo) : ControllerBase
 {
+    [HttpGet("shops")]
+    [Authorize(Roles = AppRoles.Managers)]
+    public async Task<IActionResult> GetShops([FromServices] ShopScopeRepository shops, CancellationToken ct) =>
+        Ok(await shops.ListAsync(User, ct));
+
     /// <summary>Xem số nhân viên hiện có/dự kiến theo từng khoảng giờ. Chỉ nhắc nhở, không giữ chỗ hay chặn lưu.</summary>
     [HttpPost("coverage")]
     [Authorize(Roles = AppRoles.Managers)]

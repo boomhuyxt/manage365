@@ -1,0 +1,3 @@
+BEGIN;
+ALTER TABLE public.ble_scanners ADD COLUMN IF NOT EXISTS agent_version VARCHAR(32) NULL;
+COMMIT;

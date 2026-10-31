@@ -52,6 +52,7 @@
                 <div class="modal-header"><h2 class="modal-title fs-5" id="shiftModalTitle">Phân ca mới</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
                 <div class="modal-body">
                     <div id="shiftMessage" class="alert d-none" role="alert"></div>
+                    <div class="mb-3"><label for="shiftShop" class="form-label">Cửa hàng phụ trách ca</label><select id="shiftShop" class="form-select" required></select><small class="text-secondary">BLE tự nhận diện nhân viên tại kiosk của cửa hàng này. Ca cũ chưa có cửa hàng cần xác nhận và lưu lại.</small></div>
                     <div class="row g-3">
                         <div class="col-md-6"><span class="form-label">Nhân viên nhận ca</span><div id="shiftEmployees" class="border rounded p-2 overflow-auto" style="max-height:180px" role="group" aria-label="Chọn nhân viên nhận ca"></div><small id="selectedEmployeeCount" class="text-secondary"></small></div>
                         <div class="col-md-6"><label for="shiftDate" class="form-label">Ngày làm việc</label><input id="shiftDate" type="date" class="form-control" required /></div>
