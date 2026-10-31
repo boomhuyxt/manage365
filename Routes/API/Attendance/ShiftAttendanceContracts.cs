@@ -132,7 +132,8 @@ public sealed record AdminAttendanceRecordDto(
     decimal? ActualHours,
     string Status,
     AttendanceLocationDto? CheckInLocation,
-    AttendanceLocationDto? CheckOutLocation);
+    AttendanceLocationDto? CheckOutLocation,
+    string? AttendanceMethod = null);
 
 public sealed record AdminAttendanceHistoryRecordDto(
     long AttendanceId,

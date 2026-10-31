@@ -1,7 +1,7 @@
 (() => {
   "use strict";
   const $ = id => document.getElementById(id);
-  const state = { user: null, manager: false, employees: [], templates: [], assignments: [], week: monday(today()), request: 0, editing: null, saving: false, ready: false };
+  const state = { user: null, shops: [], manager: false, employees: [], templates: [], assignments: [], week: monday(today()), request: 0, editing: null, saving: false, ready: false };
   const shiftModal = new bootstrap.Modal($("shiftModal"));
   const copyModal = new bootstrap.Modal($("copyModal"));
   function today() { return new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10); }
@@ -131,6 +131,9 @@
     state.editing = assignment;
     $("shiftForm").reset();
     for (const input of $("shiftForm").querySelectorAll("input, select, textarea, button")) input.disabled = false;
+    $("shiftShop").replaceChildren(option("", "Chọn cửa hàng…"), ...state.shops.map(s => option(s.ownerId, `${s.name} · ${s.ownerName}`)));
+    $("shiftShop").value = assignment?.shopOwnerId ?? (state.user.role === "Manager" ? state.user.id : state.shops.length === 1 ? state.shops[0].ownerId : "");
+    $("shiftShop").disabled = state.user.role === "Manager";
     message("shiftMessage", "");
     $("shiftModalTitle").textContent = assignment ? "Chi tiết & điều chỉnh ca" : "Phân ca mới";
     const empOptions = state.employees.filter(e => e.status.toLowerCase() === "active" || e.id === employeeId).map(e => option(e.id, `${e.displayName} (${e.code})`));
@@ -250,11 +253,11 @@
         const validation = await api("/api/shift-assignments/validate", "POST", pending[0]);
         if (validation.hasConflict) throw new Error(validation.message);
         const templateId = Number($("shiftTemplate").value) || null;
-        await api(`/api/shift-assignments/${state.editing.assignmentId}`, "PUT", templateId ? { shiftTemplateId: templateId, note } : { shiftName: name, startTime: pending[0].startTime, endTime: pending[0].endTime, isOvernight: pending[0].isOvernight, note });
+        await api(`/api/shift-assignments/${state.editing.assignmentId}`, "PUT", templateId ? { shiftTemplateId: templateId, note, shopOwnerId: Number($("shiftShop").value) || null } : { shiftName: name, startTime: pending[0].startTime, endTime: pending[0].endTime, isOvernight: pending[0].isOvernight, note, shopOwnerId: Number($("shiftShop").value) || null });
       } else {
         // The server validates each employee inside its write transaction. A conflict for one person cannot block others.
         const templateId = Number($("shiftTemplate").value) || null, intervalCount = intervalRows().length;
-        const assignments = pending.map((p, i) => ({ employeeId: p.employeeId, shiftDate: p.shiftDate, note, ...(templateId && i % intervalCount === 0 ? { shiftTemplateId: templateId } : { customShiftName: name, customStartTime: p.startTime, customEndTime: p.endTime, isOvernight: p.isOvernight }) }));
+        const assignments = pending.map((p, i) => ({ employeeId: p.employeeId, shiftDate: p.shiftDate, note, shopOwnerId: Number($("shiftShop").value) || null, ...(templateId && i % intervalCount === 0 ? { shiftTemplateId: templateId } : { customShiftName: name, customStartTime: p.startTime, customEndTime: p.endTime, isOvernight: p.isOvernight }) }));
         lockRetry = true;
         const result = await api("/api/shift-assignments/batch", "POST", { assignments });
         if (result.failedCount) { await load(); message("shiftMessage", `${batchSummary(result)}\nĐóng cửa sổ, đối chiếu lịch rồi chỉ chọn lại các ca lỗi.`, "warning"); queueCoverage(); return; }
@@ -306,6 +309,7 @@
     try {
       state.user = await api("/api/auth/me"); state.manager = ["Admin", "Manager"].includes(state.user.role);
       document.querySelectorAll(".manager-only").forEach(el => el.classList.toggle("d-none", !state.manager));
+      if (state.manager) state.shops = await api("/api/shift-assignments/shops");
       await load();
     } catch (error) { message("pageMessage", error.message); $("loadingState").textContent = "Không xác thực được phiên đăng nhập."; }
   }

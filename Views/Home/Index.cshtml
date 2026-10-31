@@ -22,6 +22,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <link rel="stylesheet" href="~/css/retail365.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/css/app-header.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/css/ble-kiosk.css" asp-append-version="true" />
   </head>
   <body class="bg-light-cream min-vh-100 pb-4">
     <!-- TOP NAVIGATION BAR -->
@@ -88,6 +89,7 @@
       </div>
 
       <!-- MAIN CONTENT ROW -->
+      <partial name="_BleKioskPanel" />
       <div class="row g-3">
         <!-- CỘT TRÁI: MÃ QR ĐIỂM DANH -->
         <div class="col-lg-6" data-owner-only>
@@ -413,5 +415,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/app-header.js" asp-append-version="true"></script>
     <script src="~/js/dashboard.js" asp-append-version="true"></script>
+    <script src="~/js/ble-kiosk.js" asp-append-version="true"></script>
   </body>
 </html>

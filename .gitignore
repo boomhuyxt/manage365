@@ -372,3 +372,5 @@ AGENTS.md
 .env
 .env.*
 !.env.example
+tools/BleScannerAgent/package/
+ble-scanner.json

@@ -6,6 +6,18 @@ namespace manage365.Repositories.Shifts;
 
 public sealed partial class PostgresShiftSchedulingRepository
 {
+    private async Task<long?> ResolveShopAsync(long? requested, long? existing, CancellationToken ct)
+    {
+        var actor = httpContextAccessor?.HttpContext?.User;
+        // Non-HTTP callers (maintenance/tests) may retain unknown legacy scope;
+        // NULL never grants BLE access.
+        if (actor is null) return requested ?? existing;
+        var owner = ShopScopeRepository.Resolve(actor, requested, existing);
+        var shops = await new ShopScopeRepository(dataSource).ListAsync(actor, ct);
+        if (!shops.Any(s => s.OwnerId == owner)) throw new ArgumentException("Cửa hàng không tồn tại hoặc tài khoản phụ trách đã bị khóa.");
+        return owner;
+    }
+
     private NpgsqlCommand CreateCommand(string sql, NpgsqlConnection? connection = null)
         => connection is null ? dataSource.CreateCommand(sql) : new NpgsqlCommand(sql, connection);
 
@@ -78,6 +90,7 @@ public sealed partial class PostgresShiftSchedulingRepository
     public async Task<ShiftAssignmentDto> AssignShiftAsync(AssignShiftRequest request, CancellationToken cancellationToken = default)
     {
         ShiftInput.Assignment(request);
+        var shopOwnerId = await ResolveShopAsync(request.ShopOwnerId, null, cancellationToken);
         var date = ShiftInput.Date(request.ShiftDate);
         await using var connection = await dataSource.OpenConnectionAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
@@ -91,11 +104,12 @@ public sealed partial class PostgresShiftSchedulingRepository
         if (validation.HasConflict) throw new InvalidOperationException(validation.Message);
         var shiftId = await InsertShiftAsync(connection, date, template?.Name ?? (string.IsNullOrWhiteSpace(request.CustomShiftName) ? "Ca tùy chỉnh" : request.CustomShiftName.Trim()), start, end, overnight, template?.Id, cancellationToken);
         await using var command = new NpgsqlCommand("""
-            INSERT INTO public.dang_ky_ca (id_ca_lam, id_nhan_vien, trang_thai, ghi_chu)
-            VALUES (@shift, @employee, 'Approved', @note) RETURNING id;
+            INSERT INTO public.dang_ky_ca (id_ca_lam, id_nhan_vien, trang_thai, ghi_chu, shop_owner_id)
+            VALUES (@shift, @employee, 'Approved', @note, @shop) RETURNING id;
             """, connection);
         command.Parameters.AddWithValue("shift", shiftId);
         command.Parameters.AddWithValue("employee", request.EmployeeId);
+        command.Parameters.AddWithValue("shop", NpgsqlDbType.Bigint, (object?)shopOwnerId ?? DBNull.Value);
         command.Parameters.AddWithValue("note", NpgsqlDbType.Text, (object?)request.Note ?? DBNull.Value);
         var assignmentId = Convert.ToInt64(await command.ExecuteScalarAsync(cancellationToken));
         var result = (await GetAssignmentByIdCoreAsync(assignmentId, cancellationToken, connection))!;
@@ -113,6 +127,7 @@ public sealed partial class PostgresShiftSchedulingRepository
         await LockEmployeeAsync(connection, original.EmployeeId, request.Status != "Cancelled", cancellationToken);
         var existing = await GetAssignmentByIdCoreAsync(assignmentId, cancellationToken, connection);
         if (existing is null) return null;
+        var shopOwnerId = await ResolveShopAsync(request.ShopOwnerId, existing.ShopOwnerId, cancellationToken);
         if (existing.Attendance is not null)
             throw new InvalidOperationException("Ca đã có chấm công; không được sửa hoặc hủy để giữ nguyên lịch sử.");
         if (existing.Status == "Cancelled")
@@ -151,9 +166,10 @@ public sealed partial class PostgresShiftSchedulingRepository
         }
         await using var command = new NpgsqlCommand("""
             UPDATE public.dang_ky_ca SET id_ca_lam = @shift, trang_thai = @status,
-                ghi_chu = @note, updated_at = NOW() WHERE id = @id;
+                ghi_chu = @note, shop_owner_id = @shop, updated_at = NOW() WHERE id = @id;
             """, connection);
         command.Parameters.AddWithValue("shift", shiftId);
+        command.Parameters.AddWithValue("shop", NpgsqlDbType.Bigint, (object?)shopOwnerId ?? DBNull.Value);
         command.Parameters.AddWithValue("status", request.Status ?? existing.Status);
         command.Parameters.AddWithValue("note", NpgsqlDbType.Text, (object?)(request.Note ?? existing.Note) ?? DBNull.Value);
         command.Parameters.AddWithValue("id", assignmentId);
@@ -201,10 +217,10 @@ public sealed partial class PostgresShiftSchedulingRepository
             throw new ArgumentException("Chọn hai tuần khác nhau, bắt đầu vào thứ Hai.");
         var schedule = await GetScheduleAsync(sourceStartDate, sourceStartDate.AddDays(6), cancellationToken: cancellationToken);
         var offset = targetStartDate.DayNumber - sourceStartDate.DayNumber;
-        var requests = schedule.Assignments.Where(a => a.Status != "Cancelled").Select(a => new AssignShiftRequest(
+        var requests = schedule.Assignments.Where(a => a.Status != "Cancelled" && (httpContextAccessor?.HttpContext?.User.IsInRole("Manager") != true || a.ShopOwnerId == ShopScopeRepository.ActorId(httpContextAccessor.HttpContext.User))).Select(a => new AssignShiftRequest(
             a.EmployeeId, ShiftInput.Date(a.ShiftDate).AddDays(offset).ToString("yyyy-MM-dd"),
             CustomShiftName: a.ShiftName, CustomStartTime: a.StartTime, CustomEndTime: a.EndTime,
-            IsOvernight: a.IsOvernight, Note: $"Sao chép từ tuần {sourceStartDate:dd/MM/yyyy}")).ToList();
+            IsOvernight: a.IsOvernight, Note: $"Sao chép từ tuần {sourceStartDate:dd/MM/yyyy}", ShopOwnerId: a.ShopOwnerId)).ToList();
         if (requests.Count == 0) return new(0, 0, 0, [], []);
         if (requests.Count > 200) throw new ArgumentException("Tuần nguồn có hơn 200 ca; hãy phân ca theo từng nhóm.");
         return await BatchAssignShiftsAsync(new(requests), cancellationToken);

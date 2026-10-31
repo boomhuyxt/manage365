@@ -4,7 +4,7 @@ using Npgsql;
 
 namespace manage365.Repositories.Shifts;
 
-public sealed partial class PostgresShiftSchedulingRepository(NpgsqlDataSource dataSource) : IShiftSchedulingRepository
+public sealed partial class PostgresShiftSchedulingRepository(NpgsqlDataSource dataSource, IHttpContextAccessor? httpContextAccessor = null) : IShiftSchedulingRepository
 {
     public async Task EnsureTablesAndSeedAsync(CancellationToken cancellationToken = default)
     {
@@ -81,6 +81,8 @@ public sealed partial class PostgresShiftSchedulingRepository(NpgsqlDataSource d
                     ALTER TABLE public.dang_ky_ca ADD COLUMN updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
                 END IF;
             END $$;
+
+            ALTER TABLE public.dang_ky_ca ADD COLUMN IF NOT EXISTS shop_owner_id BIGINT NULL REFERENCES public.nhan_vien(id) ON DELETE RESTRICT;
 
             CREATE INDEX IF NOT EXISTS ix_ca_lam_ngay_lam ON public.ca_lam(ngay_lam);
             CREATE INDEX IF NOT EXISTS ix_ca_lam_mau_ca ON public.ca_lam(id_mau_ca);
@@ -364,7 +366,7 @@ public sealed partial class PostgresShiftSchedulingRepository(NpgsqlDataSource d
                    cc.gio_ra,
                    cc.so_gio_thuc_te,
                    cc.trang_thai,
-                   leave_info.trang_thai
+                   leave_info.trang_thai, dkc.shop_owner_id
             FROM public.dang_ky_ca dkc
             JOIN public.ca_lam cl ON cl.id = dkc.id_ca_lam
             JOIN public.nhan_vien nv ON nv.id = dkc.id_nhan_vien
@@ -453,7 +455,7 @@ public sealed partial class PostgresShiftSchedulingRepository(NpgsqlDataSource d
                     Note: note,
                     Attendance: attendance,
                     IsOnLeave: isOnLeave,
-                    LeaveStatus: leaveStatus));
+                    LeaveStatus: leaveStatus, ShopOwnerId: reader.IsDBNull(20) ? null : reader.GetInt64(20)));
             }
         }
 
@@ -500,7 +502,7 @@ public sealed partial class PostgresShiftSchedulingRepository(NpgsqlDataSource d
                    cc.gio_ra,
                    cc.so_gio_thuc_te,
                    cc.trang_thai,
-                   leave_info.trang_thai
+                   leave_info.trang_thai, dkc.shop_owner_id
             FROM public.dang_ky_ca dkc
             JOIN public.ca_lam cl ON cl.id = dkc.id_ca_lam
             JOIN public.nhan_vien nv ON nv.id = dkc.id_nhan_vien
@@ -559,7 +561,8 @@ public sealed partial class PostgresShiftSchedulingRepository(NpgsqlDataSource d
                 Note: reader.IsDBNull(13) ? null : reader.GetString(13),
                 Attendance: attendance,
                 IsOnLeave: !reader.IsDBNull(19),
-                LeaveStatus: reader.IsDBNull(19) ? null : reader.GetString(19));
+                LeaveStatus: reader.IsDBNull(19) ? null : reader.GetString(19),
+                ShopOwnerId: reader.IsDBNull(20) ? null : reader.GetInt64(20));
         }
 
         return null;

@@ -201,7 +201,8 @@ public sealed class PostgresShiftAttendanceRepository(
                    check_out_location.allowed_radius_meters,
                    check_out_location.captured_at,
                    check_out_location.is_mocked,
-                   check_out_location.is_within_geofence
+                   check_out_location.is_within_geofence,
+                   cc.phuong_thuc_cham_cong
             FROM public.cham_cong AS cc
             JOIN public.nhan_vien AS nv ON nv.id = cc.id_nhan_vien
             LEFT JOIN public.dang_ky_ca AS dkc ON dkc.id = cc.id_dang_ky_ca
@@ -256,7 +257,8 @@ public sealed class PostgresShiftAttendanceRepository(
                 ActualHours: reader.IsDBNull(10) ? null : reader.GetDecimal(10),
                 Status: reader.GetString(11),
                 CheckInLocation: ReadLocation(reader, 12),
-                CheckOutLocation: ReadLocation(reader, 21)));
+                CheckOutLocation: ReadLocation(reader, 21),
+                AttendanceMethod: reader.IsDBNull(30) ? null : reader.GetString(30)));
         }
 
         return new AdminAttendanceSnapshotDto(

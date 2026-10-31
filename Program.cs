@@ -211,6 +211,9 @@ if (!string.IsNullOrWhiteSpace(databaseUsername))
 }
 
 builder.Services.AddSingleton(_ => NpgsqlDataSource.Create(databaseConnection.ConnectionString));
+builder.Services.AddScoped<BleScannerRepository>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<manage365.Repositories.Shifts.ShopScopeRepository>();
 
 builder.Services.AddOptions<AttendancePolicyOptions>()
     .Bind(builder.Configuration.GetSection(AttendancePolicyOptions.SectionName))
@@ -265,6 +268,8 @@ builder.Services.AddSingleton<IQrSignatureService, HmacQrSignatureService>();
 builder.Services.AddScoped<IAttendanceLocationRepository, PostgresAttendanceLocationRepository>();
 builder.Services.AddScoped<IAttendanceGeofenceService, AttendanceGeofenceService>();
 builder.Services.AddScoped<IShiftAttendanceRepository, PostgresShiftAttendanceRepository>();
+builder.Services.AddScoped<BleAttendanceService>();
+builder.Services.AddHostedService<BleAutoCheckoutService>();
 builder.Services.AddScoped<IShiftSchedulingRepository, PostgresShiftSchedulingRepository>();
 builder.Services.AddScoped<ILeaveRequestRepository, PostgresLeaveRequestRepository>();
 builder.Services.AddScoped<INotificationRepository, PostgresNotificationRepository>();
@@ -321,6 +326,25 @@ builder.Services.AddRateLimiter(options =>
         _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 30,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+    options.AddPolicy("ble-user", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)?.Value
+            ?? context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 30,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+    options.AddPolicy("ble-scanner", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 120,
             Window = TimeSpan.FromMinutes(1),
             QueueLimit = 0,
             AutoReplenishment = true

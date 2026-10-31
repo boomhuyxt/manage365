@@ -17,6 +17,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\manage365.csproj" />
+    <Compile Include="..\tools\BleScannerAgent\Installer\InstallerPayload.cs" Link="InstallerPayload.cs" />
   </ItemGroup>
 
 </Project>
