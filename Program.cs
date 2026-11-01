@@ -279,6 +279,7 @@ builder.Services.AddScoped<IShiftAttendanceRepository, PostgresShiftAttendanceRe
 builder.Services.AddScoped<BleAttendanceService>();
 builder.Services.AddHostedService<BleAutoCheckoutService>();
 builder.Services.AddScoped<IShiftSchedulingRepository, PostgresShiftSchedulingRepository>();
+builder.Services.AddScoped<AiShiftSchedulingService>();
 builder.Services.AddScoped<ILeaveRequestRepository, PostgresLeaveRequestRepository>();
 builder.Services.AddScoped<INotificationRepository, PostgresNotificationRepository>();
 builder.Services.AddScoped<IReportingRepository, PostgresReportingRepository>();

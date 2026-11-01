@@ -11,7 +11,9 @@ namespace manage365.Routes.API.Shifts;
 [ShiftApiExceptionFilter]
 [Tags("Shift Scheduling - Phân Ca Linh Động")]
 [Route("api/shift-assignments")]
-public sealed class ShiftAssignmentsController(IShiftSchedulingRepository shiftRepo) : ControllerBase
+public sealed class ShiftAssignmentsController(
+    IShiftSchedulingRepository shiftRepo,
+    AiShiftSchedulingService? aiService = null) : ControllerBase
 {
     [HttpGet("shops")]
     [Authorize(Roles = AppRoles.Managers)]
@@ -340,6 +342,48 @@ public sealed class ShiftAssignmentsController(IShiftSchedulingRepository shiftR
             cancellationToken);
 
         return Ok(result);
+    }
+
+    /// <summary>
+    /// AI Tự động xếp lịch ca làm việc thông minh và tối ưu cho tuần (Manager / Admin)
+    /// </summary>
+    /// <param name="request">Tham số xếp lịch tuần, định mức ca và ràng buộc nhân sự</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    [HttpPost("ai-generate")]
+    [Authorize(Roles = AppRoles.Managers)]
+    [ProducesResponseType<AiScheduleResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<AiScheduleResponse>> AiGenerateSchedule(
+        [FromBody] AiScheduleRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (aiService is null)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                title: "Dịch vụ AI xếp lịch chưa được kích hoạt.",
+                extensions: new Dictionary<string, object?> { ["code"] = "ai_service_unavailable" });
+        }
+
+        try
+        {
+            var result = await aiService.GenerateScheduleAsync(request, User, cancellationToken);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: ex.Message,
+                extensions: new Dictionary<string, object?> { ["code"] = "invalid_ai_schedule_request" });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Problem(
+                statusCode: StatusCodes.Status400BadRequest,
+                title: ex.Message,
+                extensions: new Dictionary<string, object?> { ["code"] = "cannot_schedule_employees" });
+        }
     }
 
     /// <summary>Danh sách nhân viên phục vụ phân ca, bao gồm người chưa có ca, không chứa dữ liệu lương.</summary>

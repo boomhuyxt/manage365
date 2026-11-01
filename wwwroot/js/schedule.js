@@ -4,6 +4,7 @@
   const state = { user: null, shops: [], manager: false, employees: [], templates: [], assignments: [], week: monday(today()), request: 0, editing: null, saving: false, ready: false };
   const shiftModal = new bootstrap.Modal($("shiftModal"));
   const copyModal = new bootstrap.Modal($("copyModal"));
+  const aiModal = new bootstrap.Modal($("aiScheduleModal"));
   function today() { return new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10); }
   function addDays(date, days) { const d = new Date(`${date}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + days); return d.toISOString().slice(0, 10); }
   function monday(date) { const day = new Date(`${date}T00:00:00Z`).getUTCDay(); return addDays(date, -(day + 6) % 7); }
@@ -50,7 +51,7 @@
     $("scheduleTableBody").replaceChildren();
     $("scheduleTableHead").replaceChildren();
     for (const id of ["employeeCount", "shiftCount", "assignedCount", "unassignedCount"]) $(id).textContent = "—";
-    $("addShiftButton").disabled = $("copyWeekButton").disabled = true;
+    $("addShiftButton").disabled = $("copyWeekButton").disabled = $("aiScheduleButton").disabled = true;
     message("pageMessage", "");
     try {
       const [employees, templates, schedule] = await Promise.all([loadEmployees(), api("/api/shift-templates"), api(`/api/shift-assignments/schedule?startDate=${week}&endDate=${addDays(week, 6)}`)]);
@@ -62,7 +63,7 @@
       if (departments.has(currentDepartment)) $("departmentFilter").value = currentDepartment;
       $("templateLegend").replaceChildren(...templates.map(t => { const el = node("span", `${t.name} · ${t.startTime}–${t.endTime}${t.isOvernight ? " (+1 ngày)" : ""}`, "legend-chip"); el.style.setProperty("--shift-color", color(t.color)); return el; }));
       $("loadingState").classList.add("d-none");
-      $("addShiftButton").disabled = !state.manager || !employees.some(e => e.status.toLowerCase() === "active");
+      $("addShiftButton").disabled = $("aiScheduleButton").disabled = !state.manager || !employees.some(e => e.status.toLowerCase() === "active");
       $("copyWeekButton").disabled = !state.manager;
       render();
     } catch (error) {
@@ -299,6 +300,169 @@
     catch (error) { message("copyMessage", `${error.message}\nTải lại lịch đích để kiểm tra trước khi thử lại.`); }
     finally { copyBusy = false; $("copyTarget").disabled = false; }
   });
+  // AI Auto-Scheduling logic
+  let aiProposedData = null, aiBusy = false;
+
+  function resetAiModal() {
+    aiProposedData = null;
+    aiBusy = false;
+    $("aiStepConfig").classList.remove("d-none");
+    $("aiStepPreview").classList.add("d-none");
+    $("aiGenerateBtn").classList.remove("d-none");
+    $("aiGenerateBtn").disabled = false;
+    $("aiGenerateBtn").innerHTML = '<i class="fa-solid fa-wand-magic-sparkles me-1"></i>Bắt đầu AI phân tích &amp; xếp lịch';
+    $("aiBackToConfigBtn").classList.add("d-none");
+    $("aiApplyBtn").classList.add("d-none");
+    $("aiApplyBtn").disabled = false;
+    $("aiApplyBtn").innerHTML = '<i class="fa-solid fa-check-double me-1"></i>Xác nhận áp dụng vào lịch tuần';
+    message("aiScheduleFeedback", "");
+  }
+
+  $("aiScheduleButton")?.addEventListener("click", () => {
+    resetAiModal();
+    $("aiWeekStart").value = state.week;
+    $("aiShiftShop").replaceChildren(option("", "Tất cả / Mặc định"), ...state.shops.map(s => option(s.ownerId, `${s.name} · ${s.ownerName}`)));
+    $("aiShiftShop").value = state.user.role === "Manager" ? state.user.id : state.shops.length === 1 ? state.shops[0].ownerId : "";
+    $("aiShiftShop").disabled = state.user.role === "Manager";
+
+    $("aiTemplatesContainer").replaceChildren(...state.templates.map(t => {
+      const label = node("label", null, "form-check d-flex align-items-center gap-2 mb-0");
+      const input = node("input", null, "form-check-input mt-0");
+      input.type = "checkbox";
+      input.value = t.id;
+      input.checked = true;
+      const span = node("span", `${t.name} (${t.startTime}–${t.endTime})`, "form-check-label small fw-semibold");
+      span.style.color = color(t.color);
+      label.append(input, span);
+      return label;
+    }));
+
+    aiModal.show();
+  });
+
+  $("aiBackToConfigBtn")?.addEventListener("click", () => {
+    $("aiStepConfig").classList.remove("d-none");
+    $("aiStepPreview").classList.add("d-none");
+    $("aiGenerateBtn").classList.remove("d-none");
+    $("aiBackToConfigBtn").classList.add("d-none");
+    $("aiApplyBtn").classList.add("d-none");
+    message("aiScheduleFeedback", "");
+  });
+
+  $("aiGenerateBtn")?.addEventListener("click", async () => {
+    if (aiBusy) return;
+    const selectedTemplateIds = Array.from($("aiTemplatesContainer").querySelectorAll("input:checked"), el => Number(el.value));
+    if (state.templates.length > 0 && selectedTemplateIds.length === 0) {
+      message("aiScheduleFeedback", "Vui lòng chọn ít nhất 1 mẫu ca làm việc.");
+      return;
+    }
+
+    const payload = {
+      weekStartDate: $("aiWeekStart").value || state.week,
+      shopOwnerId: $("aiShiftShop").value ? Number($("aiShiftShop").value) : null,
+      selectedTemplateIds: selectedTemplateIds.length ? selectedTemplateIds : null,
+      minEmployeesPerShift: Math.max(1, Number($("aiMinStaff").value) || 1),
+      maxShiftsPerEmployeePerWeek: Math.min(7, Math.max(1, Number($("aiMaxShifts").value) || 6)),
+      keepExistingShifts: $("aiKeepExisting").checked
+    };
+
+    aiBusy = true;
+    $("aiGenerateBtn").disabled = true;
+    $("aiGenerateBtn").innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>AI đang tính toán tối ưu ca...';
+    message("aiScheduleFeedback", "");
+
+    try {
+      const res = await api("/api/shift-assignments/ai-generate", "POST", payload);
+      aiProposedData = res;
+
+      $("aiSummaryText").textContent = res.summary;
+      $("aiStatsShifts").textContent = res.proposedShiftCount;
+      $("aiStatsStaff").textContent = `${res.employeesAssigned}/${res.totalEmployeesConsidered}`;
+      $("aiStatsAvg").textContent = `${res.averageShiftsPerEmployee} ca/người`;
+
+      $("aiInsightsList").replaceChildren(...res.aiInsights.map(txt => {
+        const item = node("div", txt, "small p-2 bg-light rounded border-start border-3 border-success mb-1");
+        return item;
+      }));
+
+      if (res.warnings && res.warnings.length > 0) {
+        $("aiWarningsContainer").classList.remove("d-none");
+        $("aiWarningsList").replaceChildren(...res.warnings.map(w => node("li", w)));
+      } else {
+        $("aiWarningsContainer").classList.add("d-none");
+      }
+
+      $("aiProposedCountBadge").textContent = `${res.proposedShiftCount} ca mới`;
+      if (!res.proposedShifts || res.proposedShifts.length === 0) {
+        const tr = node("tr");
+        const td = node("td", "Không có ca mới cần xếp (các ca hiện có đã đủ định mức).", "text-center text-muted p-4");
+        td.colSpan = 5;
+        tr.append(td);
+        $("aiProposedTableBody").replaceChildren(tr);
+      } else {
+        $("aiProposedTableBody").replaceChildren(...res.proposedShifts.map(s => {
+          const tr = node("tr");
+          const tdDay = node("td");
+          tdDay.append(node("strong", s.dayOfWeekName, "d-block"), node("small", dateLabel(s.shiftDate), "text-muted"));
+
+          const tdEmp = node("td");
+          tdEmp.append(node("span", s.employeeName, "fw-bold d-block"), node("small", `${s.employeeCode} · ${s.departmentName || "Bán lẻ"}`, "text-muted"));
+
+          const tdShift = node("td");
+          const badge = node("span", s.shiftName, "badge");
+          badge.style.backgroundColor = color(s.color);
+          tdShift.append(badge);
+
+          const tdTime = node("td", `${s.startTime} – ${s.endTime}${s.isOvernight ? " (+1 ngày)" : ""}`, "small");
+          const tdReason = node("td", s.reason, "extra-small text-muted");
+
+          tr.append(tdDay, tdEmp, tdShift, tdTime, tdReason);
+          return tr;
+        }));
+      }
+
+      $("aiStepConfig").classList.add("d-none");
+      $("aiStepPreview").classList.remove("d-none");
+      $("aiGenerateBtn").classList.add("d-none");
+      $("aiBackToConfigBtn").classList.remove("d-none");
+      $("aiApplyBtn").classList.remove("d-none");
+      $("aiApplyBtn").disabled = res.proposedShiftCount === 0;
+    } catch (err) {
+      message("aiScheduleFeedback", err.message);
+    } finally {
+      aiBusy = false;
+      $("aiGenerateBtn").disabled = false;
+      $("aiGenerateBtn").innerHTML = '<i class="fa-solid fa-wand-magic-sparkles me-1"></i>Bắt đầu AI phân tích &amp; xếp lịch';
+    }
+  });
+
+  $("aiApplyBtn")?.addEventListener("click", async () => {
+    if (!aiProposedData || !aiProposedData.batchAssignmentPayload || aiProposedData.batchAssignmentPayload.length === 0) return;
+    if (aiBusy) return;
+
+    aiBusy = true;
+    $("aiApplyBtn").disabled = true;
+    $("aiBackToConfigBtn").disabled = true;
+    $("aiApplyBtn").innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Đang lưu vào hệ thống...';
+    message("aiScheduleFeedback", "");
+
+    try {
+      const res = await api("/api/shift-assignments/batch", "POST", { assignments: aiProposedData.batchAssignmentPayload });
+      message("aiScheduleFeedback", `Thành công! ${batchSummary(res)}`, res.failedCount ? "warning" : "success");
+      state.week = aiProposedData.weekStartDate;
+      setTimeout(async () => {
+        aiModal.hide();
+        await load();
+      }, 1200);
+    } catch (err) {
+      message("aiScheduleFeedback", err.message);
+      aiBusy = false;
+      $("aiApplyBtn").disabled = false;
+      $("aiBackToConfigBtn").disabled = false;
+      $("aiApplyBtn").innerHTML = '<i class="fa-solid fa-check-double me-1"></i>Xác nhận áp dụng vào lịch tuần';
+    }
+  });
+
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && state.user && !state.saving) {
       if ($("shiftModal").classList.contains("show")) queueCoverage(); else load();

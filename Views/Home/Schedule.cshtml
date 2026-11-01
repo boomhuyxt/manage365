@@ -25,7 +25,7 @@
     <main class="schedule-page">
         <header class="schedule-header">
             <div><p class="eyebrow">ĐIỀU PHỐI NHÂN SỰ</p><h1>Bảng phân công ca làm việc</h1><p id="weekSubtitle" class="text-secondary mb-0"></p></div>
-            <div class="actions no-print"><button id="printButton" class="btn btn-outline-secondary">In lịch</button><button id="copyWeekButton" class="btn btn-outline-secondary manager-only" disabled>Sao chép tuần</button><button id="addShiftButton" class="btn btn-orange manager-only" disabled>+ Phân ca mới</button></div>
+            <div class="actions no-print"><button id="printButton" class="btn btn-outline-secondary">In lịch</button><button id="copyWeekButton" class="btn btn-outline-secondary manager-only" disabled>Sao chép tuần</button><button id="aiScheduleButton" class="btn btn-primary manager-only" disabled><i class="fa-solid fa-wand-magic-sparkles me-1"></i>AI Xếp ca tự động</button><button id="addShiftButton" class="btn btn-orange manager-only" disabled>+ Phân ca mới</button></div>
         </header>
         <div id="pageMessage" class="alert d-none" role="status" aria-live="polite"></div>
         <section class="schedule-stats" aria-label="Thống kê lịch đang hiển thị">
@@ -88,6 +88,160 @@
             </form>
         </div></div>
     </div>
+    <!-- MODAL AI TỰ ĐỘNG XẾP LỊCH CA LÀM -->
+    <div class="modal fade" id="aiScheduleModal" tabindex="-1" aria-labelledby="aiScheduleModalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header bg-dark text-white border-0 py-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-warning text-dark fs-6 px-2 py-1"><i class="fa-solid fa-wand-magic-sparkles"></i> AI</span>
+                        <h2 id="aiScheduleModalTitle" class="modal-title fs-5 fw-bold mb-0 text-white">AI Tự động xếp lịch ca làm việc tối ưu</h2>
+                    </div>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Đóng"></button>
+                </div>
+
+                <div class="modal-body p-4">
+                    <div id="aiScheduleFeedback" class="alert d-none" role="alert"></div>
+
+                    <!-- STEP 1: CẤU HÌNH XẾP LỊCH -->
+                    <div id="aiStepConfig">
+                        <div class="alert alert-info border-0 shadow-sm d-flex align-items-start gap-3 mb-4">
+                            <i class="fa-solid fa-circle-info fs-4 text-primary mt-1"></i>
+                            <div>
+                                <strong class="d-block mb-1">Thuật toán AI phân bổ ca thông minh:</strong>
+                                <span>Tự động cân bằng tải công việc giữa các nhân viên, bảo đảm thời gian nghỉ chuyển ca tối thiểu 12 tiếng theo Bộ luật Lao động 2019, tự động bảo vệ ngày nghỉ phép đã được duyệt và tối ưu độ phủ ca bán lẻ/POS.</span>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="aiWeekStart" class="form-label fw-bold">Tuần làm việc cần xếp (Thứ Hai)</label>
+                                <input id="aiWeekStart" type="date" class="form-control" required />
+                                <small class="text-secondary">Mặc định là tuần đang hiển thị trên bảng phân ca.</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="aiShiftShop" class="form-label fw-bold">Cửa hàng / Chi nhánh áp dụng</label>
+                                <select id="aiShiftShop" class="form-select"></select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="aiMinStaff" class="form-label fw-bold">Định mức nhân sự tối thiểu / mỗi ca</label>
+                                <div class="input-group">
+                                    <input id="aiMinStaff" type="number" class="form-control" min="1" max="10" value="1" required />
+                                    <span class="input-group-text">người / ca</span>
+                                </div>
+                                <small class="text-secondary">Đảm bảo mỗi ca làm trong ngày có ít nhất số lượng nhân viên này trực.</small>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label for="aiMaxShifts" class="form-label fw-bold">Giới hạn ca tối đa / nhân viên / tuần</label>
+                                <div class="input-group">
+                                    <input id="aiMaxShifts" type="number" class="form-control" min="1" max="7" value="6" required />
+                                    <span class="input-group-text">ca / tuần</span>
+                                </div>
+                                <small class="text-secondary">Tuân thủ Luật Lao động (đảm bảo ít nhất 1 ngày nghỉ trọn vẹn trong tuần).</small>
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label fw-bold mb-2">Các ca mẫu đưa vào tính toán AI</label>
+                                <div id="aiTemplatesContainer" class="d-flex gap-3 flex-wrap p-3 border rounded bg-light">
+                                    <!-- Rendered dynamically -->
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <div class="p-3 border rounded bg-white shadow-sm">
+                                    <div class="form-check form-switch mb-2">
+                                        <input class="form-check-input" type="checkbox" id="aiKeepExisting" checked />
+                                        <label class="form-check-label fw-semibold" for="aiKeepExisting">
+                                            Giữ nguyên các ca làm việc đã xếp trước đó (AI chỉ bù đắp các ca còn thiếu nhân sự)
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="aiRespectLeave" checked disabled />
+                                        <label class="form-check-label fw-semibold" for="aiRespectLeave">
+                                            Tự động loại trừ nhân viên có đơn nghỉ phép đã duyệt (Quy chuẩn bắt buộc)
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: PREVIEW & AI INSIGHTS -->
+                    <div id="aiStepPreview" class="d-none">
+                        <div class="card border-0 bg-primary-subtle p-3 mb-3 shadow-sm rounded-3">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div>
+                                    <h3 class="h6 fw-bold text-primary mb-1"><i class="fa-solid fa-sparkles me-1"></i>Đánh giá từ AI Manage365</h3>
+                                    <p id="aiSummaryText" class="mb-0 text-dark small"></p>
+                                </div>
+                                <div class="d-flex gap-3 text-center">
+                                    <div class="bg-white px-3 py-2 rounded border">
+                                        <div class="extra-small text-secondary fw-bold">CA ĐỀ XUẤT</div>
+                                        <strong id="aiStatsShifts" class="fs-5 text-primary">0</strong>
+                                    </div>
+                                    <div class="bg-white px-3 py-2 rounded border">
+                                        <div class="extra-small text-secondary fw-bold">NHÂN VIÊN</div>
+                                        <strong id="aiStatsStaff" class="fs-5 text-success">0</strong>
+                                    </div>
+                                    <div class="bg-white px-3 py-2 rounded border">
+                                        <div class="extra-small text-secondary fw-bold">TRUNG BÌNH</div>
+                                        <strong id="aiStatsAvg" class="fs-5 text-warning-orange">0 ca/người</strong>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <h4 class="h6 fw-bold mb-2"><i class="fa-solid fa-list-check text-success me-1"></i>Chi tiết phân tích &amp; Ràng buộc:</h4>
+                            <div id="aiInsightsList" class="d-flex flex-column gap-1"></div>
+                        </div>
+
+                        <div id="aiWarningsContainer" class="alert alert-warning d-none mb-3" role="alert">
+                            <strong class="d-block mb-1"><i class="fa-solid fa-triangle-exclamation me-1"></i>Cảnh báo thiếu hụt định mức:</strong>
+                            <ul id="aiWarningsList" class="mb-0 ps-3 small"></ul>
+                        </div>
+
+                        <div class="mb-2 d-flex justify-content-between align-items-center">
+                            <h4 class="h6 fw-bold mb-0">Danh sách các ca phân công dự kiến:</h4>
+                            <span id="aiProposedCountBadge" class="badge bg-secondary"></span>
+                        </div>
+                        <div class="table-responsive border rounded" style="max-height: 320px;">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <thead class="table-light sticky-top">
+                                    <tr>
+                                        <th>Thứ / Ngày</th>
+                                        <th>Nhân viên</th>
+                                        <th>Ca làm việc</th>
+                                        <th>Thời gian</th>
+                                        <th>Lý do &amp; Căn cứ AI</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="aiProposedTableBody">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer bg-light border-0 py-3">
+                    <button id="aiModalCloseBtn" type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button id="aiBackToConfigBtn" type="button" class="btn btn-outline-secondary d-none">
+                        <i class="fa-solid fa-arrow-left me-1"></i>Điều chỉnh tham số
+                    </button>
+                    <button id="aiGenerateBtn" type="button" class="btn btn-primary">
+                        <i class="fa-solid fa-wand-magic-sparkles me-1"></i>Bắt đầu AI phân tích &amp; xếp lịch
+                    </button>
+                    <button id="aiApplyBtn" type="button" class="btn btn-orange d-none">
+                        <i class="fa-solid fa-check-double me-1"></i>Xác nhận áp dụng vào lịch tuần
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="modal fade" id="copyModal" tabindex="-1" aria-labelledby="copyModalTitle" aria-hidden="true"><div class="modal-dialog modal-dialog-centered"><div class="modal-content">
         <form id="copyForm"><div class="modal-header"><h2 id="copyModalTitle" class="modal-title fs-5">Sao chép lịch tuần</h2><button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button></div>
         <div class="modal-body"><p id="copySource"></p><p class="small text-secondary">Sao chép toàn bộ nhân viên của tuần nguồn, giữ giờ đã phân. Ca xung đột sẽ bị bỏ qua và được báo riêng.</p><label for="copyTarget" class="form-label">Thứ Hai của tuần đích</label><input id="copyTarget" type="date" class="form-control" required /><div id="copyMessage" class="alert d-none mt-3" role="alert"></div></div>

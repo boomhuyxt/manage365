@@ -167,3 +167,70 @@ public sealed record WeeklyScheduleResponse(
 public sealed record CopyWeeklyScheduleRequest(
     string SourceStartDate,
     string TargetStartDate);
+
+/// <summary>
+/// Yêu cầu AI tự động xếp lịch ca làm việc cho tuần.
+/// </summary>
+public sealed record AiScheduleRequest(
+    string WeekStartDate,
+    long? ShopOwnerId = null,
+    List<long>? SelectedTemplateIds = null,
+    int MinEmployeesPerShift = 1,
+    int MaxShiftsPerEmployeePerWeek = 6,
+    bool KeepExistingShifts = true,
+    List<long>? ExcludeEmployeeIds = null);
+
+/// <summary>
+/// Chi tiết ca làm việc được AI đề xuất phân công.
+/// </summary>
+public sealed record AiProposedShiftDto(
+    long EmployeeId,
+    string EmployeeName,
+    string EmployeeCode,
+    string? DepartmentName,
+    string ShiftDate,
+    string DayOfWeekName,
+    long? ShiftTemplateId,
+    string ShiftName,
+    string StartTime,
+    string EndTime,
+    bool IsOvernight,
+    string Color,
+    string Reason);
+
+/// <summary>
+/// Thống kê phân bổ nhân sự theo từng khung giờ trong ngày của AI.
+/// </summary>
+public sealed record AiShiftSlotCoverageDto(
+    string ShiftName,
+    string StartTime,
+    string EndTime,
+    int StaffCount,
+    List<string> StaffNames);
+
+/// <summary>
+/// Thống kê phân bổ nhân sự từng ngày của tuần.
+/// </summary>
+public sealed record AiDayCoverageDto(
+    string Date,
+    string DayOfWeekName,
+    int TotalShifts,
+    int TotalStaff,
+    List<AiShiftSlotCoverageDto> ShiftSlots);
+
+/// <summary>
+/// Kết quả xếp lịch ca làm việc tự động bằng AI.
+/// </summary>
+public sealed record AiScheduleResponse(
+    string WeekStartDate,
+    string WeekEndDate,
+    int ProposedShiftCount,
+    int TotalEmployeesConsidered,
+    int EmployeesAssigned,
+    double AverageShiftsPerEmployee,
+    List<AiProposedShiftDto> ProposedShifts,
+    List<AssignShiftRequest> BatchAssignmentPayload,
+    List<AiDayCoverageDto> DailyCoverage,
+    List<string> AiInsights,
+    List<string> Warnings,
+    string Summary);
