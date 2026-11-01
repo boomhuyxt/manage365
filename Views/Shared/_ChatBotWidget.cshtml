@@ -1,0 +1,155 @@
+<!-- ==========================================================================
+     MANAGE365 - EMPLOYEE HR ASSISTANT CHATBOT WIDGET
+     Giao diện ô chat bot hỗ trợ nhân viên góc dưới bên phải
+     Kết nối trực tiếp API https://manage365.click/api với local fallback
+     ========================================================================== -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+<link rel="stylesheet" href="~/css/chatbot.css" asp-append-version="true" />
+
+<!-- FLOATING LAUNCHER BUTTON (Góc dưới bên phải) -->
+<div class="manage365-chatbot-launcher-wrapper">
+  <!-- BỌT CHAT / CHAT BUBBLE GỢI Ý -->
+  <div id="manage365ChatBubble" class="launcher-chat-bubble">
+    <span class="bubble-text"><i class="fa-solid fa-sparkles text-warning me-1"></i>Hỏi HR AI ngay! 👋</span>
+    <button id="manage365DismissBubble" class="bubble-close" type="button" title="Ẩn">&times;</button>
+  </div>
+
+  <!-- NÚT BẤM CHAT BOT VỚI BIỂU TƯỢNG ROBOT/BOT -->
+  <button
+    id="manage365ChatLauncher"
+    type="button"
+    class="manage365-chatbot-launcher"
+    aria-label="Mở Trợ lý HR AI Manage365"
+    title="Trợ lý Nhân sự AI (Bot)"
+  >
+    <span class="launcher-pulse-ring" aria-hidden="true"></span>
+    <span class="launcher-icon-chat" aria-hidden="true">
+      <!-- BIỂU TƯỢNG BOT (ROBOT MASCOT) -->
+      <svg class="bot-launcher-svg" viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="10" width="18" height="11" rx="3" fill="rgba(255, 255, 255, 0.2)"></rect>
+        <circle cx="12" cy="4" r="1.8" fill="currentColor"></circle>
+        <path d="M12 6v4"></path>
+        <circle cx="8.5" cy="14" r="1.5" fill="currentColor"></circle>
+        <circle cx="15.5" cy="14" r="1.5" fill="currentColor"></circle>
+        <path d="M9 18h6" stroke-width="1.8"></path>
+        <path d="M1.5 14.5a1.5 1.5 0 0 0 1.5 1.5"></path>
+        <path d="M22.5 14.5a1.5 1.5 0 0 1-1.5 1.5"></path>
+      </svg>
+    </span>
+    <span class="launcher-icon-close" aria-hidden="true"><i class="fa-solid fa-xmark"></i></span>
+    <span class="launcher-status-dot" aria-hidden="true"></span>
+  </button>
+</div>
+
+<!-- CHATBOT WINDOW -->
+<div id="manage365ChatWindow" class="manage365-chatbot-window" role="dialog" aria-label="Khung chat Trợ lý HR Manage365">
+  
+  <!-- HEADER -->
+  <header class="manage365-chatbot-header">
+    <div class="cb-header-left">
+      <div class="cb-avatar" aria-hidden="true">
+        <i class="fa-solid fa-robot"></i>
+      </div>
+      <div class="cb-header-info">
+        <span class="cb-header-title">Trợ lý HR Manage365</span>
+        <span class="cb-header-status">
+          <span id="manage365ChatStatusDot" class="cb-status-indicator"></span>
+          <span id="manage365ChatStatusText">Sẵn sàng hỗ trợ 24/7</span>
+        </span>
+      </div>
+    </div>
+    <div class="cb-header-actions">
+      <button id="manage365ChatTemplatesBtn" type="button" class="cb-header-btn" title="Xem 10 Biểu mẫu Giấy tờ">
+        <i class="fa-solid fa-folder-open"></i>
+      </button>
+      <button id="manage365ChatSoundBtn" type="button" class="cb-header-btn" title="Bật/Tắt âm thanh">
+        <i class="fa-solid fa-volume-high"></i>
+      </button>
+      <button id="manage365ChatResetBtn" type="button" class="cb-header-btn" title="Làm mới cuộc trò chuyện">
+        <i class="fa-solid fa-rotate-right"></i>
+      </button>
+      <button id="manage365ChatMinBtn" type="button" class="cb-header-btn" title="Thu nhỏ">
+        <i class="fa-solid fa-minus"></i>
+      </button>
+      <button id="manage365ChatCloseBtn" type="button" class="cb-header-btn" title="Đóng">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- QUICK CHIPS SUGGESTIONS -->
+  <div class="cb-quick-chips-wrapper">
+    <div class="cb-quick-chips-title">
+      <span><i class="fa-solid fa-lightbulb text-warning me-1"></i>Câu hỏi gợi ý nhanh:</span>
+    </div>
+    <div class="cb-quick-chips-scroll">
+      <button type="button" class="cb-chip-btn" data-query="Cho tôi xem quy trình và mẫu đơn xin nghỉ phép [BM-01]">
+        <i class="fa-regular fa-calendar-minus text-warning"></i> Nghỉ phép (BM-01)
+      </button>
+      <button type="button" class="cb-chip-btn" data-query="Quy định làm thêm giờ (OT) và mẫu đơn đăng ký đổi ca [BM-02] thế nào?">
+        <i class="fa-regular fa-clock text-info"></i> Làm thêm ca / OT (BM-02)
+      </button>
+      <button type="button" class="cb-chip-btn" data-query="Mẫu đơn đề xuất tăng lương [BM-06] và điều kiện xét duyệt">
+        <i class="fa-solid fa-arrow-trend-up text-success"></i> Tăng lương (BM-06)
+      </button>
+      <button type="button" class="cb-chip-btn" data-query="Quy trình nộp đơn thôi việc [BM-03] và thời hạn báo trước theo luật">
+        <i class="fa-regular fa-file-lines text-secondary"></i> Thôi việc (BM-03)
+      </button>
+      <button type="button" class="cb-chip-btn" data-query="Chế độ hưởng bảo hiểm xã hội (ốm đau, thai sản) [BM-09] cần những giấy tờ gì?">
+        <i class="fa-solid fa-notes-medical text-danger"></i> Chế độ BHXH (BM-09)
+      </button>
+      <button type="button" class="cb-chip-btn" data-query="Hợp đồng thử việc [BM-05] kéo dài bao lâu và mức lương thử việc quy định thế nào?">
+        <i class="fa-regular fa-handshake text-primary"></i> Thử việc (BM-05)
+      </button>
+    </div>
+  </div>
+
+  <!-- MESSAGES CONTAINER -->
+  <main id="manage365ChatMessages" class="manage365-chatbot-messages" role="log" aria-live="polite">
+    <!-- Messages and typing indicator dynamically inserted here -->
+  </main>
+
+  <!-- TEMPLATES DRAWER MODAL -->
+  <div id="manage365ChatTemplatesDrawer" class="cb-templates-drawer" aria-hidden="true">
+    <div class="cb-drawer-header">
+      <div class="cb-drawer-title">
+        <i class="fa-solid fa-folder-tree text-warning-orange"></i>
+        <span>10 Biểu Mẫu Giấy Tờ Hành Chính Doanh Nghiệp</span>
+      </div>
+      <button id="manage365DrawerCloseBtn" type="button" class="cb-drawer-close" title="Đóng danh sách">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <div id="manage365ChatTemplatesList" class="cb-templates-list">
+      <div class="text-center p-3 text-muted small">Đang tải danh sách biểu mẫu...</div>
+    </div>
+  </div>
+
+  <!-- INPUT FOOTER -->
+  <footer class="manage365-chatbot-footer">
+    <form id="manage365ChatForm" class="cb-input-form">
+      <textarea
+        id="manage365ChatInput"
+        class="cb-textarea"
+        rows="1"
+        placeholder="Nhập câu hỏi cần hỗ trợ nhân sự..."
+        aria-label="Nội dung câu hỏi"
+      ></textarea>
+      <button
+        id="manage365ChatSendBtn"
+        type="submit"
+        class="cb-send-btn"
+        title="Gửi câu hỏi"
+        disabled
+      >
+        <i class="fa-solid fa-paper-plane"></i>
+      </button>
+    </form>
+    <div class="cb-footer-note">
+      <i class="fa-solid fa-shield-halved"></i>
+      <span>Manage365 HR AI • Kết nối tri thức <a href="https://manage365.click" target="_blank" rel="noopener">manage365.click</a></span>
+    </div>
+  </footer>
+</div>
+
+<script src="~/js/chatbot.js" asp-append-version="true"></script>

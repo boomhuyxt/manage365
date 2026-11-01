@@ -73,6 +73,14 @@ builder.Services.AddHttpClient<IAddressGeocodingService, NominatimGeocodingServi
         "Manage365/1.0 (+https://www.manage365.io.vn)");
     client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("vi-VN,vi;q=0.9");
 });
+builder.Services.AddHttpClient("ChatBot", client =>
+{
+    var baseUrl = builder.Configuration["ChatBot:BaseUrl"] ?? "https://manage365.click/api";
+    client.BaseAddress = new Uri(baseUrl.TrimEnd('/') + "/");
+    client.Timeout = TimeSpan.FromSeconds(60);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("Manage365/1.0 (+https://manage365.click)");
+    client.DefaultRequestHeaders.AcceptLanguage.ParseAdd("vi-VN,vi;q=0.9");
+});
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new OpenApiInfo
